@@ -14,12 +14,16 @@ import java.util.stream.Collectors;
 @Service
 public class AutocompleteService {
     private static final Logger log = LoggerFactory.getLogger(AutocompleteService.class);
+
     private final FrequencyTermRepository frequencyTermRepository;
+
     @Value("${autocomplete.max-suggestions:10}")
     private int maxSuggestions;
+
     public AutocompleteService(FrequencyTermRepository frequencyTermRepository) {
         this.frequencyTermRepository = frequencyTermRepository;
     }
+
     @Cacheable(value = "autocomplete", key = "#prefix + '_' + #limit")
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
         log.info("Buscando sugerencias para prefijo: {}", prefix);
@@ -33,6 +37,7 @@ public class AutocompleteService {
             .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
             .collect(Collectors.toList());
     }
+
     @Transactional
     @CacheEvict(value = "autocomplete", allEntries = true)
     public FrequencyTerm saveTerm(String term) {
@@ -58,6 +63,7 @@ public class AutocompleteService {
             .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
             .collect(Collectors.toList());
     }
+    
     @Transactional
     public void initializeSampleData() {
         if (frequencyTermRepository.count() == 0) {
