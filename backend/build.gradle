@@ -40,10 +40,6 @@ dependencies {
 	// Caffeine cache
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 	
-	// Lombok
-	compileOnly 'org.projectlombok:lombok'
-	annotationProcessor 'org.projectlombok:lombok'
-	
 	// Validation
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	

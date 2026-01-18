@@ -1,8 +1,5 @@
 package com.autocomplete.datastructure;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,8 +7,6 @@ import java.util.Map;
  * Nodo del Trie Tree
  * Cada nodo representa un carácter en el árbol
  */
-@Getter
-@Setter
 public class TrieNode {
     private Map<Character, TrieNode> children;
     private boolean isEndOfWord;
@@ -22,6 +17,38 @@ public class TrieNode {
         this.children = new HashMap<>();
         this.isEndOfWord = false;
         this.frequency = 0L;
+    }
+    
+    public Map<Character, TrieNode> getChildren() {
+        return children;
+    }
+    
+    public void setChildren(Map<Character, TrieNode> children) {
+        this.children = children;
+    }
+    
+    public boolean isEndOfWord() {
+        return isEndOfWord;
+    }
+    
+    public void setEndOfWord(boolean endOfWord) {
+        isEndOfWord = endOfWord;
+    }
+    
+    public String getWord() {
+        return word;
+    }
+    
+    public void setWord(String word) {
+        this.word = word;
+    }
+    
+    public long getFrequency() {
+        return frequency;
+    }
+    
+    public void setFrequency(long frequency) {
+        this.frequency = frequency;
     }
     
     /**

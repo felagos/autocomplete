@@ -4,7 +4,6 @@ import com.autocomplete.dto.*;
 import com.autocomplete.entity.FrequencyTerm;
 import com.autocomplete.service.AutocompleteService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,10 +18,13 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/autocomplete")
-@RequiredArgsConstructor
 public class AutocompleteController {
     
     private final AutocompleteService autocompleteService;
+    
+    public AutocompleteController(AutocompleteService autocompleteService) {
+        this.autocompleteService = autocompleteService;
+    }
     
     /**
      * Endpoint para obtener sugerencias basadas en un prefijo

@@ -1,7 +1,8 @@
 package com.autocomplete.datastructure;
 
 import com.autocomplete.dto.SuggestionDTO;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,8 +17,8 @@ import java.util.PriorityQueue;
  * - Space: O(n * m) donde n es el número de palabras
  */
 @Component
-@Slf4j
 public class Trie {
+    private static final Logger log = LoggerFactory.getLogger(Trie.class);
     private final TrieNode root;
     
     public Trie() {

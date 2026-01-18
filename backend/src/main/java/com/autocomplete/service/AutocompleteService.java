@@ -5,8 +5,8 @@ import com.autocomplete.dto.SuggestionDTO;
 import com.autocomplete.entity.FrequencyTerm;
 import com.autocomplete.repository.FrequencyTermRepository;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,15 +21,19 @@ import java.util.List;
  * - Persistencia en base de datos para durabilidad
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class AutocompleteService {
+    private static final Logger log = LoggerFactory.getLogger(AutocompleteService.class);
     
     private final Trie trie;
     private final FrequencyTermRepository frequencyTermRepository;
     
     @Value("${autocomplete.max-suggestions:10}")
     private int maxSuggestions;
+    
+    public AutocompleteService(Trie trie, FrequencyTermRepository frequencyTermRepository) {
+        this.trie = trie;
+        this.frequencyTermRepository = frequencyTermRepository;
+    }
     
     /**
      * Inicializa el Trie con datos existentes en la base de datos
