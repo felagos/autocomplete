@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: autocomplete-backend
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:mem:autocomplete}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    username: ${DATABASE_USER:sa}
+    password: ${DATABASE_PASSWORD:}
+  
+  h2:
+    console:
+      enabled: ${H2_CONSOLE_ENABLED:true}
+      path: /h2-console
+  
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:create-drop}
+    show-sql: ${SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}
+  
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=10000,expireAfterWrite=300s
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# Configuración del sistema de autocompletado
+autocomplete:
+  max-suggestions: ${MAX_SUGGESTIONS:10}
+  min-prefix-length: ${MIN_PREFIX_LENGTH:1}
+  cache-enabled: ${CACHE_ENABLED:true}
+
+# Actuator para health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

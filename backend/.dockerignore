@@ -1,0 +1,40 @@
+# Build
+.gradle/
+build/
+target/
+dist/
+*.jar
+*.war
+
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Tests
+**/test/
+**/__tests__/
+*.test.*
+*.spec.*
