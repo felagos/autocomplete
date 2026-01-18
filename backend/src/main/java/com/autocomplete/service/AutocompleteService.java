@@ -1,70 +1,44 @@
 package com.autocomplete.service;
 
-import com.autocomplete.datastructure.Trie;
 import com.autocomplete.dto.SuggestionDTO;
 import com.autocomplete.entity.FrequencyTerm;
-import com.autocomplete.event.TrieUpdateEvent;
 import com.autocomplete.repository.FrequencyTermRepository;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Servicio de autocompletado que implementa conceptos de System Design Interview:
- * - Trie Tree para búsqueda eficiente O(m + k)
+ * - Búsqueda eficiente usando índices de base de datos
  * - Frequency-based ranking
- * - Estructura de datos en memoria para máxima performance
- * - Persistencia en base de datos para durabilidad
- * - Sincronización distribuida via Redis Pub/Sub
+ * - Caching para optimizar búsquedas repetidas
+ * - Write-through cache pattern
  */
 @Service
 public class AutocompleteService {
     private static final Logger log = LoggerFactory.getLogger(AutocompleteService.class);
     
-    private final Trie trie;
     private final FrequencyTermRepository frequencyTermRepository;
-    private final RedisTemplate<String, TrieUpdateEvent> redisTemplate;
-    private final ChannelTopic trieUpdateTopic;
     
     @Value("${autocomplete.max-suggestions:10}")
     private int maxSuggestions;
     
-    public AutocompleteService(Trie trie, 
-                              FrequencyTermRepository frequencyTermRepository,
-                              RedisTemplate<String, TrieUpdateEvent> redisTemplate,
-                              ChannelTopic trieUpdateTopic) {
-        this.trie = trie;
+    public AutocompleteService(FrequencyTermRepository frequencyTermRepository) {
         this.frequencyTermRepository = frequencyTermRepository;
-        this.redisTemplate = redisTemplate;
-        this.trieUpdateTopic = trieUpdateTopic;
     }
     
     /**
-     * Inicializa el Trie con datos existentes en la base de datos
+     * Obtiene sugerencias basadas en el prefijo
+     * Cachea resultados para mejorar performance
      */
-    @PostConstruct
-    public void initializeTrie() {
-        log.info("Inicializando Trie con datos de la base de datos");
-        List<FrequencyTerm> terms = frequencyTermRepository.findAll();
-        
-        for (FrequencyTerm term : terms) {
-            trie.insert(term.getTerm(), term.getFrequency());
-        }
-        
-        log.info("Trie inicializado con {} términos", terms.size());
-    }
-    
-    /**
-     * Obtiene sugerencias basadas en el prefijo usando Trie
-     * Complejidad: O(m + k) donde m es la longitud del prefijo y k el número de sugerencias
-     */
+    @Cacheable(value = "autocomplete", key = "#prefix + '_' + #limit")
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
         log.info("Buscando sugerencias para prefijo: {}", prefix);
         
@@ -72,26 +46,27 @@ public class AutocompleteService {
             return List.of();
         }
         
-        int effectiveLimit = Math.min(limit, maxSuggestions);
-        return trie.getSuggestions(prefix.trim(), effectiveLimit);
+        List<FrequencyTerm> terms = frequencyTermRepository
+            .findByTermStartingWithOrderByFrequencyDesc(prefix.trim().toLowerCase());
+        
+        return terms.stream()
+            .limit(Math.min(limit, maxSuggestions))
+            .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
+            .collect(Collectors.toList());
     }
     
     /**
      * Guarda o actualiza un término incrementando su frecuencia
-     * Actualiza tanto el Trie como la base de datos para persistencia
-     * Publica evento a Redis para sincronizar otras instancias
+     * Invalida cache para reflejar cambios
      */
     @Transactional
+    @CacheEvict(value = "autocomplete", allEntries = true)
     public FrequencyTerm saveTerm(String term) {
         log.info("Guardando término: {}", term);
         
         String normalizedTerm = term.trim().toLowerCase();
         
-        // Actualizar el Trie local
-        trie.incrementFrequency(normalizedTerm);
-        
-        // Persistir en base de datos
-        FrequencyTerm savedTerm = frequencyTermRepository.findByTerm(normalizedTerm)
+        return frequencyTermRepository.findByTerm(normalizedTerm)
             .map(existingTerm -> {
                 existingTerm.incrementFrequency();
                 return frequencyTermRepository.save(existingTerm);
@@ -102,29 +77,19 @@ public class AutocompleteService {
                 newTerm.setFrequency(1L);
                 return frequencyTermRepository.save(newTerm);
             });
-        
-        // Publicar evento a Redis para sincronizar otras instancias
-        try {
-            TrieUpdateEvent event = new TrieUpdateEvent(savedTerm.getTerm(), savedTerm.getFrequency());
-            redisTemplate.convertAndSend(trieUpdateTopic.getTopic(), event);
-            log.debug("Evento de actualización publicado a Redis: {}", event);
-        } catch (Exception e) {
-            log.warn("Error publicando evento a Redis (la instancia local ya está actualizada): {}", e.getMessage());
-        }
-        
-        return savedTerm;
     }
     
     /**
-     * Obtiene los términos más populares del Trie
+     * Obtiene los términos más populares
      */
+    @Cacheable(value = "topTerms")
     public List<SuggestionDTO> getTopTerms(int limit) {
         log.info("Obteniendo top {} términos", limit);
         
-        List<SuggestionDTO> allWords = trie.getAllWords();
-        return allWords.stream()
+        return frequencyTermRepository.findTopByFrequency().stream()
             .limit(limit)
-            .toList();
+            .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
+            .collect(Collectors.toList());
     }
     
     /**
