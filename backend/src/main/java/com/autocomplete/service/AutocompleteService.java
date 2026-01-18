@@ -1,7 +1,10 @@
 package com.autocomplete.service;
+
 import com.autocomplete.dto.SuggestionDTO;
 import com.autocomplete.entity.FrequencyTerm;
 import com.autocomplete.repository.FrequencyTermRepository;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,8 +12,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.stream.Collectors;
+
 @Service
 public class AutocompleteService {
     private static final Logger log = LoggerFactory.getLogger(AutocompleteService.class);
@@ -55,6 +57,7 @@ public class AutocompleteService {
                 return frequencyTermRepository.save(newTerm);
             });
     }
+
     @Cacheable(value = "topTerms")
     public List<SuggestionDTO> getTopTerms(int limit) {
         log.info("Obteniendo top {} términos", limit);
@@ -63,7 +66,7 @@ public class AutocompleteService {
             .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
             .collect(Collectors.toList());
     }
-    
+
     @Transactional
     public void initializeSampleData() {
         if (frequencyTermRepository.count() == 0) {
