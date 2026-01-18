@@ -1,7 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/autocomplete'
-
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -9,18 +7,15 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json'
   }
 })
-
 export interface SuggestionDTO {
   term: string
   frequency: number
 }
-
 export interface AutocompleteResponse {
   prefix: string
   suggestions: SuggestionDTO[]
   executionTimeMs: number
 }
-
 export interface FrequencyTerm {
   id: number
   term: string
@@ -28,12 +23,8 @@ export interface FrequencyTerm {
   lastUsed: string
   createdAt: string
 }
-
-/**
- * Obtiene sugerencias de autocompletado basadas en un prefijo
- */
 export const getSuggestions = async (
-  prefix: string, 
+  prefix: string,
   limit: number = 10
 ): Promise<AutocompleteResponse> => {
   try {
@@ -46,10 +37,6 @@ export const getSuggestions = async (
     throw error
   }
 }
-
-/**
- * Envía un término seleccionado para incrementar su frecuencia
- */
 export const submitTerm = async (term: string): Promise<FrequencyTerm> => {
   try {
     const response = await api.post<FrequencyTerm>('/submit', { term })
@@ -59,10 +46,6 @@ export const submitTerm = async (term: string): Promise<FrequencyTerm> => {
     throw error
   }
 }
-
-/**
- * Obtiene los términos más populares
- */
 export const getTopTerms = async (limit: number = 10): Promise<SuggestionDTO[]> => {
   try {
     const response = await api.get<SuggestionDTO[]>('/top', {
@@ -74,10 +57,6 @@ export const getTopTerms = async (limit: number = 10): Promise<SuggestionDTO[]> 
     throw error
   }
 }
-
-/**
- * Inicializa datos de ejemplo en el backend
- */
 export const initializeData = async (): Promise<string> => {
   try {
     const response = await api.post<string>('/init')
@@ -87,5 +66,4 @@ export const initializeData = async (): Promise<string> => {
     throw error
   }
 }
-
 export default api

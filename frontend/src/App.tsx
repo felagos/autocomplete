@@ -2,33 +2,27 @@ import React, { useState } from 'react'
 import Autocomplete from './components/Autocomplete'
 import TopTerms from './components/TopTerms'
 import './App.css'
-
 function App() {
   const [selectedTerm, setSelectedTerm] = useState<string>('')
-
   return (
     <div className="App">
       <header className="App-header">
         <h1>🔍 Sistema de Autocompletado</h1>
         <p className="subtitle">Implementado con conceptos de System Design Interview</p>
       </header>
-
       <main className="App-main">
         <div className="autocomplete-section">
           <h2>Búsqueda con Autocompletado</h2>
           <Autocomplete onSelect={setSelectedTerm} />
-          
           {selectedTerm && (
             <div className="selected-term">
               <p>✅ Término seleccionado: <strong>{selectedTerm}</strong></p>
             </div>
           )}
         </div>
-
         <div className="top-terms-section">
           <TopTerms />
         </div>
-
         <div className="info-section">
           <h3>Características del Sistema</h3>
           <ul>
@@ -41,12 +35,10 @@ function App() {
           </ul>
         </div>
       </main>
-
       <footer className="App-footer">
         <p>Backend: Spring Boot + Gradle + JPA | Frontend: React 18 + TypeScript + Vite</p>
       </footer>
     </div>
   )
 }
-
 export default App

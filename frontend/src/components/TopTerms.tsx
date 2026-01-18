@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { getTopTerms, SuggestionDTO } from '../services/api'
 import './TopTerms.css'
-
-/**
- * Componente que muestra los términos más populares
- */
 function TopTerms() {
   const [topTerms, setTopTerms] = useState<SuggestionDTO[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-
   useEffect(() => {
     loadTopTerms()
   }, [])
-
   const loadTopTerms = async () => {
     setLoading(true)
     setError(null)
@@ -27,7 +21,6 @@ function TopTerms() {
       setLoading(false)
     }
   }
-
   if (loading) {
     return (
       <div className="top-terms-container">
@@ -36,7 +29,6 @@ function TopTerms() {
       </div>
     )
   }
-
   if (error) {
     return (
       <div className="top-terms-container">
@@ -48,7 +40,6 @@ function TopTerms() {
       </div>
     )
   }
-
   return (
     <div className="top-terms-container">
       <div className="top-terms-header">
@@ -57,7 +48,6 @@ function TopTerms() {
           🔄
         </button>
       </div>
-
       <div className="top-terms-list">
         {topTerms.map((term, index) => (
           <div key={term.term} className="top-term-item">
@@ -69,8 +59,8 @@ function TopTerms() {
               </div>
             </div>
             <div className="term-bar">
-              <div 
-                className="term-bar-fill" 
+              <div
+                className="term-bar-fill"
                 style={{
                   width: `${(term.frequency / topTerms[0].frequency) * 100}%`
                 }}
@@ -82,5 +72,4 @@ function TopTerms() {
     </div>
   )
 }
-
 export default TopTerms

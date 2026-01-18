@@ -1,15 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { getSuggestions, submitTerm, SuggestionDTO } from '../services/api'
 import './Autocomplete.css'
-
 interface AutocompleteProps {
   onSelect?: (term: string) => void
 }
-
-/**
- * Componente de Autocompletado
- * Implementa debouncing para optimizar llamadas al servidor
- */
 function Autocomplete({ onSelect }: AutocompleteProps) {
   const [query, setQuery] = useState<string>('')
   const [suggestions, setSuggestions] = useState<SuggestionDTO[]>([])
@@ -19,7 +13,6 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
   const [executionTime, setExecutionTime] = useState<number | null>(null)
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
-
   // Cerrar sugerencias al hacer click fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -30,7 +23,6 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
   // Búsqueda con debouncing
   useEffect(() => {
     if (query.length === 0) {
@@ -38,12 +30,10 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
       setShowSuggestions(false)
       return
     }
-
     // Clear previous timeout
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current)
     }
-
     // Set new timeout
     debounceTimeout.current = setTimeout(async () => {
       setLoading(true)
@@ -60,22 +50,18 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
         setLoading(false)
       }
     }, 300) // 300ms debounce
-
     return () => {
       if (debounceTimeout.current) {
         clearTimeout(debounceTimeout.current)
       }
     }
   }, [query])
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
   }
-
   const handleSuggestionClick = async (term: string) => {
     setQuery(term)
     setShowSuggestions(false)
-    
     // Enviar término seleccionado al backend para incrementar frecuencia
     try {
       await submitTerm(term)
@@ -86,14 +72,12 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
       console.error('Error al enviar término:', error)
     }
   }
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return
-
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex(prev => 
+        setSelectedIndex(prev =>
           prev < suggestions.length - 1 ? prev + 1 : prev
         )
         break
@@ -115,7 +99,6 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
         break
     }
   }
-
   return (
     <div className="autocomplete-wrapper" ref={wrapperRef}>
       <div className="input-container">
@@ -130,7 +113,6 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
         />
         {loading && <div className="loading-spinner">🔄</div>}
       </div>
-
       {showSuggestions && suggestions.length > 0 && (
         <div className="suggestions-dropdown">
           <div className="suggestions-header">
@@ -156,7 +138,6 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
           </ul>
         </div>
       )}
-
       {showSuggestions && suggestions.length === 0 && query && !loading && (
         <div className="suggestions-dropdown">
           <div className="no-results">
@@ -167,5 +148,4 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
     </div>
   )
 }
-
 export default Autocomplete
