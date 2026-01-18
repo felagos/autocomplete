@@ -29,33 +29,39 @@ public class AutocompleteController {
     public ResponseEntity<AutocompleteResponse> getSuggestions(
             @RequestParam String prefix,
             @RequestParam(defaultValue = "10") int limit) {
-        long startTime = System.currentTimeMillis();
-        List<SuggestionDTO> suggestions = autocompleteService.getSuggestions(prefix, limit);
-        long executionTime = System.currentTimeMillis() - startTime;
-        AutocompleteResponse response = new AutocompleteResponse(
+        var startTime = System.currentTimeMillis();
+
+        var suggestions = autocompleteService.getSuggestions(prefix, limit);
+        var executionTime = System.currentTimeMillis() - startTime;
+        
+        var response = new AutocompleteResponse(
             prefix,
             suggestions,
             executionTime
         );
+
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/submit")
     public ResponseEntity<FrequencyTerm> submitTerm(@Valid @RequestBody TermSubmitRequest request) {
-        FrequencyTerm savedTerm = autocompleteService.saveTerm(request.getTerm());
+        var savedTerm = autocompleteService.saveTerm(request.getTerm());
+       
         return ResponseEntity.ok(savedTerm);
     }
 
     @GetMapping("/top")
     public ResponseEntity<List<SuggestionDTO>> getTopTerms(
             @RequestParam(defaultValue = "10") int limit) {
-        List<SuggestionDTO> topTerms = autocompleteService.getTopTerms(limit);
+        var topTerms = autocompleteService.getTopTerms(limit);
+        
         return ResponseEntity.ok(topTerms);
     }
 
     @PostMapping("/init")
     public ResponseEntity<String> initializeData() {
         autocompleteService.initializeSampleData();
+        
         return ResponseEntity.ok("Datos de ejemplo inicializados correctamente");
     }
 }
