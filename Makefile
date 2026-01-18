@@ -1,4 +1,4 @@
-.PHONY: help docker-up docker-down docker-logs frontend backend lint lint-fix clean install
+.PHONY: help docker-up docker-down docker-rebuild docker-logs frontend backend lint lint-fix clean install
 
 # Variables
 DOCKER_COMPOSE_FILE := docker-compose.yml
@@ -33,6 +33,7 @@ help: ## Muestra esta ayuda
 	@echo "Docker:"
 	@echo "  make docker-up          - Inicia los servicios con Docker Compose"
 	@echo "  make docker-down        - Detiene los servicios de Docker Compose"
+	@echo "  make docker-rebuild     - Reconstruye y reinicia los servicios de Docker Compose"
 	@echo "  make docker-logs        - Muestra los logs de Docker Compose"
 	@echo ""
 	@echo "Desarrollo:"
@@ -58,13 +59,22 @@ help: ## Muestra esta ayuda
 docker-up: ## Inicia los servicios con Docker Compose
 	@echo "Iniciando servicios con Docker Compose..."
 	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d
-	@echo "✓ Servicios iniciados. Accede a:"
+	@echo "Servicios iniciados. Accede a:"
 	@echo "  - Frontend: http://localhost:5173"
 	@echo "  - Backend API: http://localhost:8080"
 
 docker-down: ## Detiene los servicios de Docker Compose
 	@echo "Deteniendo servicios de Docker Compose..."
 	docker-compose -f $(DOCKER_COMPOSE_FILE) down
+
+docker-rebuild: ## Reconstruye y reinicia los servicios de Docker Compose
+	@echo "Reconstruyendo servicios de Docker Compose..."
+	docker-compose -f $(DOCKER_COMPOSE_FILE) down
+	docker-compose -f $(DOCKER_COMPOSE_FILE) build --no-cache
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d
+	@echo "✓ Servicios reconstruidos y reiniciados. Accede a:"
+	@echo "  - Frontend: http://localhost:5173"
+	@echo "  - Backend API: http://localhost:8080"
 
 docker-logs: ## Muestra los logs de Docker Compose
 	docker-compose -f $(DOCKER_COMPOSE_FILE) logs -f
