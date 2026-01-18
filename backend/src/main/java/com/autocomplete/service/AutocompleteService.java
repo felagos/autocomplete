@@ -3,11 +3,14 @@ package com.autocomplete.service;
 import com.autocomplete.datastructure.Trie;
 import com.autocomplete.dto.SuggestionDTO;
 import com.autocomplete.entity.FrequencyTerm;
+import com.autocomplete.event.TrieUpdateEvent;
 import com.autocomplete.repository.FrequencyTermRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,7 @@ import java.util.List;
  * - Frequency-based ranking
  * - Estructura de datos en memoria para máxima performance
  * - Persistencia en base de datos para durabilidad
+ * - Sincronización distribuida via Redis Pub/Sub
  */
 @Service
 public class AutocompleteService {
@@ -26,13 +30,20 @@ public class AutocompleteService {
     
     private final Trie trie;
     private final FrequencyTermRepository frequencyTermRepository;
+    private final RedisTemplate<String, TrieUpdateEvent> redisTemplate;
+    private final ChannelTopic trieUpdateTopic;
     
     @Value("${autocomplete.max-suggestions:10}")
     private int maxSuggestions;
     
-    public AutocompleteService(Trie trie, FrequencyTermRepository frequencyTermRepository) {
+    public AutocompleteService(Trie trie, 
+                              FrequencyTermRepository frequencyTermRepository,
+                              RedisTemplate<String, TrieUpdateEvent> redisTemplate,
+                              ChannelTopic trieUpdateTopic) {
         this.trie = trie;
         this.frequencyTermRepository = frequencyTermRepository;
+        this.redisTemplate = redisTemplate;
+        this.trieUpdateTopic = trieUpdateTopic;
     }
     
     /**
@@ -68,6 +79,7 @@ public class AutocompleteService {
     /**
      * Guarda o actualiza un término incrementando su frecuencia
      * Actualiza tanto el Trie como la base de datos para persistencia
+     * Publica evento a Redis para sincronizar otras instancias
      */
     @Transactional
     public FrequencyTerm saveTerm(String term) {
@@ -75,11 +87,11 @@ public class AutocompleteService {
         
         String normalizedTerm = term.trim().toLowerCase();
         
-        // Actualizar el Trie
+        // Actualizar el Trie local
         trie.incrementFrequency(normalizedTerm);
         
         // Persistir en base de datos
-        return frequencyTermRepository.findByTerm(normalizedTerm)
+        FrequencyTerm savedTerm = frequencyTermRepository.findByTerm(normalizedTerm)
             .map(existingTerm -> {
                 existingTerm.incrementFrequency();
                 return frequencyTermRepository.save(existingTerm);
@@ -90,6 +102,17 @@ public class AutocompleteService {
                 newTerm.setFrequency(1L);
                 return frequencyTermRepository.save(newTerm);
             });
+        
+        // Publicar evento a Redis para sincronizar otras instancias
+        try {
+            TrieUpdateEvent event = new TrieUpdateEvent(savedTerm.getTerm(), savedTerm.getFrequency());
+            redisTemplate.convertAndSend(trieUpdateTopic.getTopic(), event);
+            log.debug("Evento de actualización publicado a Redis: {}", event);
+        } catch (Exception e) {
+            log.warn("Error publicando evento a Redis (la instancia local ya está actualizada): {}", e.getMessage());
+        }
+        
+        return savedTerm;
     }
     
     /**
