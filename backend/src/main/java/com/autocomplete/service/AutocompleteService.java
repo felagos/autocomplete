@@ -29,11 +29,14 @@ public class AutocompleteService {
     @Cacheable(value = "autocomplete", key = "#prefix + '_' + #limit")
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
         log.info("Buscando sugerencias para prefijo: {}", prefix);
+
         if (prefix == null || prefix.trim().isEmpty()) {
             return List.of();
         }
-        List<FrequencyTerm> terms = frequencyTermRepository
+
+       var terms = frequencyTermRepository
             .findByTermStartingWithOrderByFrequencyDesc(prefix.trim().toLowerCase());
+
         return terms.stream()
             .limit(Math.min(limit, maxSuggestions))
             .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
@@ -44,7 +47,9 @@ public class AutocompleteService {
     @CacheEvict(value = "autocomplete", allEntries = true)
     public FrequencyTerm saveTerm(String term) {
         log.info("Guardando término: {}", term);
+        
         String normalizedTerm = term.trim().toLowerCase();
+
         return frequencyTermRepository.findByTerm(normalizedTerm)
             .map(existingTerm -> {
                 existingTerm.incrementFrequency();
@@ -61,28 +66,34 @@ public class AutocompleteService {
     @Cacheable(value = "topTerms")
     public List<SuggestionDTO> getTopTerms(int limit) {
         log.info("Obteniendo top {} términos", limit);
-        return frequencyTermRepository.findTopByFrequency().stream()
+
+        var suggestions =frequencyTermRepository.findTopByFrequency().stream()
             .limit(limit)
             .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
             .collect(Collectors.toList());
+
+        return suggestions;
     }
 
     @Transactional
     public void initializeSampleData() {
         if (frequencyTermRepository.count() == 0) {
             log.info("Inicializando datos de ejemplo");
+
             String[] sampleTerms = {
                 "javascript", "java", "python", "react", "angular", "vue",
                 "typescript", "spring", "django", "flask", "nodejs", "express",
                 "mongodb", "postgresql", "mysql", "redis", "docker", "kubernetes",
                 "aws", "azure", "google cloud", "spring boot", "react native"
             };
+
             for (int i = 0; i < sampleTerms.length; i++) {
                 FrequencyTerm term = new FrequencyTerm();
                 term.setTerm(sampleTerms[i]);
                 term.setFrequency((long) (sampleTerms.length - i) * 100);
                 frequencyTermRepository.save(term);
             }
+            
             log.info("Datos de ejemplo inicializados");
         }
     }
