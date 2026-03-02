@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useDeferredValue } from 'react'
+import { useState, useRef, useDeferredValue, ChangeEvent, useCallback } from 'react'
 import {
   EuiFieldSearch,
   EuiSelectable,
@@ -6,7 +6,6 @@ import {
   EuiFlexGroup,
   EuiFlexItem,
   EuiBadge,
-  EuiLoadingSpinner,
   EuiCallOut,
   EuiSpacer,
 } from '@elastic/eui'
@@ -18,32 +17,35 @@ interface AutocompleteProps {
 
 interface SelectableOption {
   label: string
-  data: SuggestionDTO
+  term: string
+  frequency: number
+  checked?: 'on' | 'off' | undefined
 }
 
 export function Autocomplete({ onSelect }: AutocompleteProps) {
   const [query, setQuery] = useState<string>('')
-  const deferredQuery = useDeferredValue(query)
   const [suggestions, setSuggestions] = useState<SuggestionDTO[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [executionTime, setExecutionTime] = useState<number | null>(null)
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Búsqueda con debouncing
-  useEffect(() => {
-    if (deferredQuery.length === 0) {
-      setSuggestions([])
-      return
-    }
+  const handleInputChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value
+    setQuery(newQuery)
 
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current)
     }
 
+    if (newQuery.length === 0) {
+      setSuggestions([])
+      return
+    }
+
     debounceTimeout.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const response = await getSuggestions(deferredQuery)
+        const response = await getSuggestions(newQuery)
         setSuggestions(response.suggestions)
         setExecutionTime(response.executionTimeMs)
       } catch (error) {
@@ -53,17 +55,7 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
         setLoading(false)
       }
     }, 300)
-
-    return () => {
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current)
-      }
-    }
-  }, [deferredQuery])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value)
-  }
+  }, [])
 
   const handleSuggestionSelect = async (term: string) => {
     setQuery(term)
@@ -79,10 +71,10 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
     }
   }
 
-  // Convertir sugerencias a formato de EuiSelectable
   const options: SelectableOption[] = suggestions.map((suggestion) => ({
     label: suggestion.term,
-    data: suggestion,
+    term: suggestion.term,
+    frequency: suggestion.frequency,
   }))
 
   const renderOption = (option: SelectableOption) => {
@@ -90,12 +82,12 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
       <EuiFlexGroup justifyContent="spaceBetween" alignItems="center" gutterSize="s">
         <EuiFlexItem grow={true}>
           <EuiText size="s">
-            <strong>{option.data.term}</strong>
+            <strong>{option.term}</strong>
           </EuiText>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiBadge color="hollow">
-            {option.data.frequency.toLocaleString()} búsquedas
+            {option.frequency?.toLocaleString()} búsquedas
           </EuiBadge>
         </EuiFlexItem>
       </EuiFlexGroup>
