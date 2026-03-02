@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import {
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Chip,
+  LinearProgress,
+  CircularProgress,
+  Alert,
+  Button,
+  Stack,
+  IconButton,
+} from '@mui/material'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { getTopTerms, SuggestionDTO } from '../services/api'
-import './TopTerms.css'
 
-/**
- * Componente que muestra los términos más populares
- */
-function TopTerms() {
+export function TopTerms() {
   const [topTerms, setTopTerms] = useState<SuggestionDTO[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,56 +40,94 @@ function TopTerms() {
 
   if (loading) {
     return (
-      <div className="top-terms-container">
-        <h2>🔥 Términos Más Populares</h2>
-        <div className="loading">Cargando...</div>
-      </div>
+      <Card>
+        <CardContent>
+          <Stack direction="column" alignItems="center" spacing={2}>
+            <Typography variant="h5">🔥 Términos Más Populares</Typography>
+            <CircularProgress />
+          </Stack>
+        </CardContent>
+      </Card>
     )
   }
 
   if (error) {
     return (
-      <div className="top-terms-container">
-        <h2>🔥 Términos Más Populares</h2>
-        <div className="error">{error}</div>
-        <button onClick={loadTopTerms} className="reload-button">
-          Reintentar
-        </button>
-      </div>
+      <Card>
+        <CardContent>
+          <Typography variant="h5" sx={{ mb: 2 }}>
+            🔥 Términos Más Populares
+          </Typography>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Button variant="contained" onClick={loadTopTerms}>
+            Reintentar
+          </Button>
+        </CardContent>
+      </Card>
     )
   }
 
-  return (
-    <div className="top-terms-container">
-      <div className="top-terms-header">
-        <h2>🔥 Términos Más Populares</h2>
-        <button onClick={loadTopTerms} className="refresh-button" title="Actualizar">
-          🔄
-        </button>
-      </div>
+  const maxFrequency = topTerms[0]?.frequency || 1
 
-      <div className="top-terms-list">
-        {topTerms.map((term, index) => (
-          <div key={term.term} className="top-term-item">
-            <div className="term-rank">#{index + 1}</div>
-            <div className="term-info">
-              <div className="term-name">{term.term}</div>
-              <div className="term-stats">
-                {term.frequency.toLocaleString()} búsquedas
-              </div>
-            </div>
-            <div className="term-bar">
-              <div 
-                className="term-bar-fill" 
-                style={{
-                  width: `${(term.frequency / topTerms[0].frequency) * 100}%`
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+  return (
+    <Card>
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="h5" sx={{ m: 0 }}>
+            🔥 Términos Más Populares
+          </Typography>
+          <IconButton
+            onClick={loadTopTerms}
+            size="small"
+            aria-label="Actualizar términos populares"
+          >
+            <RefreshIcon />
+          </IconButton>
+        </Stack>
+
+        <Stack direction="column" spacing={1}>
+          {topTerms.map((term, index) => (
+            <Box
+              key={term.term}
+              sx={{
+                backgroundColor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                padding: 1.5,
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Chip
+                  label={`#${index + 1}`}
+                  color="primary"
+                  size="small"
+                  sx={{ minWidth: '40px', justifyContent: 'center' }}
+                />
+
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2">
+                    <strong>{term.term}</strong>
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {term.frequency.toLocaleString()} búsquedas
+                  </Typography>
+                </Box>
+
+                <Box sx={{ flex: 2, minWidth: '100px' }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={(term.frequency / maxFrequency) * 100}
+                  />
+                </Box>
+              </Stack>
+            </Box>
+          ))}
+        </Stack>
+      </CardContent>
+    </Card>
   )
 }
 

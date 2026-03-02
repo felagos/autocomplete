@@ -1,82 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useRef, ChangeEvent, useCallback } from 'react'
+import {
+  TextField,
+  Typography,
+  Box,
+  Paper,
+  CircularProgress,
+  Alert,
+  Chip,
+  Stack,
+} from '@mui/material'
 import { getSuggestions, submitTerm, SuggestionDTO } from '../services/api'
-import './Autocomplete.css'
 
 interface AutocompleteProps {
   onSelect?: (term: string) => void
 }
 
-/**
- * Componente de Autocompletado
- * Implementa debouncing para optimizar llamadas al servidor
- */
-function Autocomplete({ onSelect }: AutocompleteProps) {
-  const [query, setQuery] = useState<string>('')
+export function Autocomplete({ onSelect }: AutocompleteProps) {
+  const [queryState, setQueryState] = useState<string>('')
   const [suggestions, setSuggestions] = useState<SuggestionDTO[]>([])
   const [loading, setLoading] = useState<boolean>(false)
-  const [showSuggestions, setShowSuggestions] = useState<boolean>(false)
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const [executionTime, setExecutionTime] = useState<number | null>(null)
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null)
-  const wrapperRef = useRef<HTMLDivElement>(null)
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const queryRef = useRef<string>('')
 
-  // Cerrar sugerencias al hacer click fuera
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const handleSuggestionSelect = useCallback(async (term: string) => {
+    setQueryState(term)
+    setSuggestions([])
+    queryRef.current = term
 
-  // Búsqueda con debouncing
-  useEffect(() => {
-    if (query.length === 0) {
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
-    }
-
-    // Clear previous timeout
-    if (debounceTimeout.current) {
-      clearTimeout(debounceTimeout.current)
-    }
-
-    // Set new timeout
-    debounceTimeout.current = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const response = await getSuggestions(query)
-        setSuggestions(response.suggestions)
-        setExecutionTime(response.executionTimeMs)
-        setShowSuggestions(true)
-        setSelectedIndex(-1)
-      } catch (error) {
-        console.error('Error al obtener sugerencias:', error)
-        setSuggestions([])
-      } finally {
-        setLoading(false)
-      }
-    }, 300) // 300ms debounce
-
-    return () => {
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current)
-      }
-    }
-  }, [query])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value)
-  }
-
-  const handleSuggestionClick = async (term: string) => {
-    setQuery(term)
-    setShowSuggestions(false)
-    
-    // Enviar término seleccionado al backend para incrementar frecuencia
     try {
       await submitTerm(term)
       if (onSelect) {
@@ -85,86 +36,137 @@ function Autocomplete({ onSelect }: AutocompleteProps) {
     } catch (error) {
       console.error('Error al enviar término:', error)
     }
-  }
+  }, [onSelect])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || suggestions.length === 0) return
+  const handleInputChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const newQuery = e.target.value
+      setQueryState(newQuery)
+      queryRef.current = newQuery
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setSelectedIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        )
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setSelectedIndex(prev => prev > 0 ? prev - 1 : -1)
-        break
-      case 'Enter':
-        e.preventDefault()
-        if (selectedIndex >= 0) {
-          handleSuggestionClick(suggestions[selectedIndex].term)
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current)
+      }
+
+      if (newQuery.length === 0) {
+        setSuggestions([])
+        return
+      }
+
+      debounceTimeout.current = setTimeout(async () => {
+        setLoading(true)
+        try {
+          const response = await getSuggestions(newQuery)
+          setSuggestions(response.suggestions)
+          setExecutionTime(response.executionTimeMs)
+        } catch (error) {
+          console.error('Error al obtener sugerencias:', error)
+          setSuggestions([])
+        } finally {
+          setLoading(false)
         }
-        break
-      case 'Escape':
-        setShowSuggestions(false)
-        setSelectedIndex(-1)
-        break
-      default:
-        break
+      }, 300)
+    },
+    []
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && queryRef.current.trim()) {
+        e.preventDefault()
+        handleSuggestionSelect(queryRef.current.trim())
+      }
+    },
+    [handleSuggestionSelect]
+  )
+
+  const handleSearch = useCallback(() => {
+    if (queryRef.current.trim()) {
+      handleSuggestionSelect(queryRef.current.trim())
     }
-  }
+  }, [handleSuggestionSelect])
 
   return (
-    <div className="autocomplete-wrapper" ref={wrapperRef}>
-      <div className="input-container">
-        <input
-          type="text"
-          className="autocomplete-input"
-          placeholder="Escribe para buscar... (ej: java, react, python)"
-          value={query}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => query && setShowSuggestions(true)}
-        />
-        {loading && <div className="loading-spinner">🔄</div>}
-      </div>
+    <Box sx={{ width: '100%', position: 'relative' }}>
+      <TextField
+        fullWidth
+        placeholder="Escribe para buscar... (ej: java, react, python)"
+        value={queryState}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        disabled={loading}
+        inputProps={{
+          'aria-label': 'Campo de búsqueda de autocompletado',
+        }}
+        slotProps={{
+          input: {
+            endAdornment: loading ? (
+              <CircularProgress color="inherit" size={20} />
+            ) : null,
+          },
+        }}
+      />
 
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="suggestions-dropdown">
-          <div className="suggestions-header">
-            {suggestions.length} sugerencia{suggestions.length !== 1 ? 's' : ''}
-            {executionTime !== null && (
-              <span className="execution-time"> • {executionTime}ms</span>
-            )}
-          </div>
-          <ul className="suggestions-list">
-            {suggestions.map((suggestion, index) => (
-              <li
-                key={suggestion.term}
-                className={`suggestion-item ${index === selectedIndex ? 'selected' : ''}`}
-                onClick={() => handleSuggestionClick(suggestion.term)}
-                onMouseEnter={() => setSelectedIndex(index)}
-              >
-                <span className="suggestion-term">{suggestion.term}</span>
-                <span className="suggestion-frequency">
-                  {suggestion.frequency.toLocaleString()} búsquedas
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {executionTime !== null && queryState && (
+        <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
+          {suggestions.length} sugerencia
+          {suggestions.length !== 1 ? 's' : ''} • {executionTime}ms
+        </Typography>
       )}
 
-      {showSuggestions && suggestions.length === 0 && query && !loading && (
-        <div className="suggestions-dropdown">
-          <div className="no-results">
-            No se encontraron resultados para "{query}"
-          </div>
-        </div>
+      {queryState && suggestions.length > 0 && !loading && (
+        <Paper
+          sx={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            maxHeight: '300px',
+            overflowY: 'auto',
+            marginTop: '8px',
+            zIndex: 1000,
+          }}
+        >
+          {suggestions.map((suggestion) => (
+            <Box
+              key={suggestion.term}
+              onClick={() => handleSuggestionSelect(suggestion.term)}
+              sx={{
+                padding: '12px 16px',
+                borderBottom: '1px solid #f0f0f0',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  backgroundColor: '#f9f9f9',
+                },
+                '&:last-child': {
+                  borderBottom: 'none',
+                },
+              }}
+            >
+              <Typography variant="body2">
+                <strong>{suggestion.term}</strong>
+              </Typography>
+              <Chip
+                label={`${suggestion.frequency?.toLocaleString()} búsquedas`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            </Box>
+          ))}
+        </Paper>
       )}
-    </div>
+
+      {queryState && suggestions.length === 0 && !loading && (
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          No se encontraron resultados para "{queryState}"
+        </Alert>
+      )}
+    </Box>
   )
 }
 
