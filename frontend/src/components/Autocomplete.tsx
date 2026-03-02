@@ -1,4 +1,4 @@
-import { useState, useRef, useDeferredValue, ChangeEvent, useCallback } from 'react'
+import { useState, useRef, ChangeEvent, useCallback } from 'react'
 import {
   EuiFieldSearch,
   EuiSelectable,
@@ -23,15 +23,32 @@ interface SelectableOption {
 }
 
 export function Autocomplete({ onSelect }: AutocompleteProps) {
-  const [query, setQuery] = useState<string>('')
+  const [queryState, setQueryState] = useState<string>('')
   const [suggestions, setSuggestions] = useState<SuggestionDTO[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [executionTime, setExecutionTime] = useState<number | null>(null)
   const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const queryRef = useRef<string>('')
+
+  const handleSuggestionSelect = useCallback(async (term: string) => {
+    setQueryState(term)
+    setSuggestions([])
+    queryRef.current = term
+    
+    try {
+      await submitTerm(term)
+      if (onSelect) {
+        onSelect(term)
+      }
+    } catch (error) {
+      console.error('Error al enviar término:', error)
+    }
+  }, [onSelect])
 
   const handleInputChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value
-    setQuery(newQuery)
+    setQueryState(newQuery)
+    queryRef.current = newQuery
 
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current)
@@ -57,19 +74,18 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
     }, 300)
   }, [])
 
-  const handleSuggestionSelect = async (term: string) => {
-    setQuery(term)
-    setSuggestions([])
-    
-    try {
-      await submitTerm(term)
-      if (onSelect) {
-        onSelect(term)
-      }
-    } catch (error) {
-      console.error('Error al enviar término:', error)
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && queryRef.current.trim()) {
+      e.preventDefault()
+      handleSuggestionSelect(queryRef.current.trim())
     }
-  }
+  }, [handleSuggestionSelect])
+
+  const handleSearch = useCallback(() => {
+    if (queryRef.current.trim()) {
+      handleSuggestionSelect(queryRef.current.trim())
+    }
+  }, [handleSuggestionSelect])
 
   const options: SelectableOption[] = suggestions.map((suggestion) => ({
     label: suggestion.term,
@@ -98,14 +114,16 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
     <div>
       <EuiFieldSearch
         placeholder="Escribe para buscar... (ej: java, react, python)"
-        value={query}
+        value={queryState}
         onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onSearch={handleSearch}
         isLoading={loading}
         fullWidth
         aria-label="Campo de búsqueda de autocompletado"
       />
       
-      {executionTime !== null && query && (
+      {executionTime !== null && queryState && (
         <>
           <EuiSpacer size="s" />
           <EuiText size="xs" color="subdued">
@@ -114,7 +132,7 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
         </>
       )}
 
-      {query && suggestions.length > 0 && !loading && (
+      {queryState && suggestions.length > 0 && !loading && (
         <>
           <EuiSpacer size="s" />
           <EuiSelectable
@@ -137,7 +155,7 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
         </>
       )}
 
-      {query && suggestions.length === 0 && !loading && (
+      {queryState && suggestions.length === 0 && !loading && (
         <>
           <EuiSpacer size="s" />
           <EuiCallOut
@@ -146,7 +164,7 @@ export function Autocomplete({ onSelect }: AutocompleteProps) {
             iconType="search"
             size="s"
           >
-            No se encontraron resultados para "{query}"
+            No se encontraron resultados para "{queryState}"
           </EuiCallOut>
         </>
       )}
