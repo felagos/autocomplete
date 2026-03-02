@@ -1,338 +1,415 @@
 # Sistema de Autocompletado
 
-Sistema completo de autocompletado implementando conceptos del libro **"System Design Interview"**.
+Un sistema de autocompletado escalable implementado con conceptos de System Design Interview. Proporciona sugerencias contextuales basadas en prefijos y rastrea los términos más populares.
 
-## 📋 Descripción General
+## 🎯 Características
 
-Este proyecto implementa un sistema de autocompletado de alta performance que utiliza:
-- **Frequency Table** para ranking de sugerencias
-- **Caching** para optimización de búsquedas repetidas
-- **Debouncing** en el cliente para reducir carga del servidor
-- **Índices de base de datos** para búsquedas eficientes
-- **API REST** para comunicación cliente-servidor
+- **Motor de Autocompletado Eficiente**: Búsqueda rápida de sugerencias basada en prefijos
+- **Tracking de Términos**: Contador de frecuencia para términos más buscados
+- **Caché Distribuido**: Implementación con Caffeine Cache para optimizar consultas
+- **API REST**: Endpoints bien documentados para integración
+- **Interfaz Moderna**: UI responsiva con Material Design 3 (Material-UI)
+- **Arquitectura de Microservicios**: Backend y Frontend separados
+- **Containerizada**: Fácil despliegue con Docker Compose
 
-## 🏗️ Arquitectura del Sistema
+## 🏗️ Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         FRONTEND                             │
-│  ┌──────────────┐    ┌──────────────┐   ┌──────────────┐   │
-│  │ Autocomplete │ ←→ │  API Client  │ ← │   TopTerms   │   │
-│  │  Component   │    │   (Axios)    │   │  Component   │   │
-│  └──────────────┘    └──────────────┘   └──────────────┘   │
-│         ↓                    ↓                   ↓          │
-│     Debouncing          HTTP Requests      Real-time        │
-│     (300ms)             to Backend         Updates          │
-└─────────────────────────────────────────────────────────────┘
-                              ↕ HTTP (REST)
-┌─────────────────────────────────────────────────────────────┐
-│                         BACKEND                              │
-│  ┌──────────────┐    ┌──────────────┐   ┌──────────────┐   │
-│  │  Controller  │ ←→ │   Service    │ ← │  Repository  │   │
-│  │   (REST)     │    │  (Business)  │   │     (JPA)    │   │
-│  └──────────────┘    └──────────────┘   └──────────────┘   │
-│         ↓                    ↓                   ↓          │
-│    CORS Config         Cache Layer          Database        │
-│    Validation          (Caffeine)           Indexing        │
-└─────────────────────────────────────────────────────────────┘
-                              ↕ JDBC
-┌─────────────────────────────────────────────────────────────┐
-│                   DATABASE (H2)                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │            FREQUENCY_TABLE                           │   │
-│  ├──────────┬───────────┬──────────┬─────────────────┤   │
-│  │ id (PK)  │   term    │frequency │   last_used     │   │
-│  ├──────────┼───────────┼──────────┼─────────────────┤   │
-│  │    1     │   java    │   4500   │  2026-01-17     │   │
-│  │    2     │javascript │   5000   │  2026-01-17     │   │
-│  └──────────┴───────────┴──────────┴─────────────────┘   │
-│                                                             │
-│  Indices:                                                   │
-│  - idx_term: B-Tree index on term (for prefix search)      │
-│  - idx_frequency: B-Tree index on frequency DESC           │
+│                  FRONTEND (React + TypeScript)                │
+│                   - Sistema Autocomplete                      │
+│                   - Top Terms Component                       │
+│                   - Material-UI Components                    │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  │ HTTP REST API
+                  │
+┌─────────────────▼───────────────────────────────────────────┐
+│              BACKEND (Spring Boot 3.2.1, Java 21)            │
+│  - AutocompleteController                                    │
+│  - AutocompleteService (con Caché)                          │
+│  - Repository Layer (JPA)                                    │
+│  - Entity: FrequencyTerm                                     │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  │ JDBC
+                  │
+┌─────────────────▼───────────────────────────────────────────┐
+│           PostgreSQL 16 (Base de Datos)                      │
+│  - Almacenamiento de términos                               │
+│  - Registro de frecuencias                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🎯 Conceptos de System Design Interview Implementados
+## 📋 Requisitos Previos
 
-### 1. **Data Model Design**
-- **Frequency Table**: Almacena términos con su frecuencia de uso
-- **Timestamps**: Tracking de creación y último uso
-- **Normalization**: Términos almacenados en minúsculas
+- Docker y Docker Compose
+- Git
+- (Opcional) Java 21 + Gradle para desarrollo local
+- (Opcional) Node.js 18+ para desarrollo del frontend
 
-### 2. **Performance Optimization**
-- **Database Indexing**: Índices en `term` y `frequency` para queries O(log n)
-- **Caching**: Cache en memoria (Caffeine) con TTL de 5 minutos
-- **Connection Pooling**: Pool de conexiones por defecto de HikariCP
-- **Lazy Loading**: Carga bajo demanda de datos
+## 🚀 Inicio Rápido
 
-### 3. **Scalability Patterns**
-- **Stateless Backend**: Permite escalado horizontal
-- **Cache-Aside Pattern**: Cache con fallback a database
-- **Write-Through Cache**: Invalidación de cache en escrituras
-- **Rate Limiting Ready**: Estructura preparada para rate limiting
+### Con Docker Compose (Recomendado)
 
-### 4. **Client Optimization**
-- **Debouncing**: 300ms delay para reducir requests
-- **Optimistic UI**: Respuesta inmediata en la interfaz
-- **Progressive Enhancement**: Funciona sin JavaScript básico
+```bash
+# Clona el repositorio
+git clone <repository-url>
+cd autocomplete
 
-### 5. **API Design**
-- **RESTful**: Endpoints semánticos y consistentes
-- **Versioning Ready**: Estructura `/api/` para versionado
-- **Pagination Support**: Parámetro `limit` en queries
-- **Response Metadata**: Tiempo de ejecución en respuestas
+# Inicia todos los servicios
+docker-compose up -d
 
-## 📁 Estructura del Proyecto
+# Espera a que se inicien (aproximadamente 30 segundos)
+docker-compose logs -f
+```
+
+La aplicación estará disponible en:
+- **Frontend**: http://localhost
+- **Backend API**: http://localhost:8080
+- **PostgreSQL**: localhost:5432
+
+### Desarrollo Local
+
+#### Backend
+
+```bash
+cd backend
+
+# Compilar
+./gradlew build
+
+# Ejecutar (con H2 Database)
+./gradlew bootRun
+```
+
+El backend estará disponible en `http://localhost:8080`
+
+#### Frontend
+
+```bash
+cd frontend
+
+# Instalar dependencias
+npm install
+
+# Ejecutar en modo desarrollo
+npm run dev
+```
+
+El frontend estará disponible en `http://localhost:5173`
+
+## 📚 API Endpoints
+
+### GET `/api/autocomplete/suggestions`
+
+Obtiene sugerencias de autocompletado basadas en un prefijo.
+
+**Parámetros Query:**
+- `prefix` (string, requerido): Prefijo para buscar sugerencias
+- `limit` (integer, opcional): Número máximo de sugerencias (default: 10)
+
+**Ejemplo:**
+```bash
+curl "http://localhost:8080/api/autocomplete/suggestions?prefix=java&limit=5"
+```
+
+**Respuesta:**
+```json
+{
+  "suggestions": [
+    {
+      "term": "java",
+      "frequency": 156
+    },
+    {
+      "term": "javascript",
+      "frequency": 142
+    }
+  ]
+}
+```
+
+### POST `/api/autocomplete/submit`
+
+Registra un término de búsqueda (incrementa su frecuencia).
+
+**Body:**
+```json
+{
+  "term": "spring boot"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "term": "spring boot",
+  "frequency": 1
+}
+```
+
+### GET `/api/autocomplete/top-terms`
+
+Obtiene los términos más buscados.
+
+**Parámetros Query:**
+- `limit` (integer, opcional): Número de términos a retornar (default: 10)
+
+**Ejemplo:**
+```bash
+curl "http://localhost:8080/api/autocomplete/top-terms?limit=5"
+```
+
+## 🗂️ Estructura del Proyecto
 
 ```
 autocomplete/
-├── backend/                          # Spring Boot Backend
+├── backend/                           # Spring Boot Application
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/com/autocomplete/
 │   │   │   │   ├── AutocompleteApplication.java
-│   │   │   │   ├── config/
-│   │   │   │   │   ├── CacheConfig.java
-│   │   │   │   │   └── WebConfig.java
 │   │   │   │   ├── controller/
 │   │   │   │   │   └── AutocompleteController.java
+│   │   │   │   ├── service/
+│   │   │   │   │   └── AutocompleteService.java
+│   │   │   │   ├── repository/
+│   │   │   │   │   └── FrequencyTermRepository.java
+│   │   │   │   ├── entity/
+│   │   │   │   │   └── FrequencyTerm.java
 │   │   │   │   ├── dto/
 │   │   │   │   │   ├── AutocompleteRequest.java
 │   │   │   │   │   ├── AutocompleteResponse.java
 │   │   │   │   │   ├── SuggestionDTO.java
 │   │   │   │   │   └── TermSubmitRequest.java
-│   │   │   │   ├── entity/
-│   │   │   │   │   └── FrequencyTerm.java
-│   │   │   │   ├── repository/
-│   │   │   │   │   └── FrequencyTermRepository.java
-│   │   │   │   └── service/
-│   │   │   │       └── AutocompleteService.java
+│   │   │   │   └── config/
+│   │   │   │       ├── CacheConfig.java
+│   │   │   │       └── WebConfig.java
 │   │   │   └── resources/
-│   │   │       ├── application.yml
+│   │   │       ├── application.yml      # Config desarrollo
+│   │   │       ├── application-prod.yml # Config producción
 │   │   │       └── data.sql
 │   │   └── test/
-│   ├── pom.xml
-│   └── README.md
+│   ├── build.gradle
+│   ├── Dockerfile
+│   └── gradlew
 │
-└── frontend/                         # React Frontend
-    ├── src/
-    │   ├── components/
-    │   │   ├── Autocomplete.jsx
-    │   │   ├── Autocomplete.css
-    │   │   ├── TopTerms.jsx
-    │   │   └── TopTerms.css
-    │   ├── services/
-    │   │   └── api.js
-    │   ├── App.jsx
-    │   ├── App.css
-    │   ├── main.jsx
-    │   └── index.css
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    └── README.md
+├── frontend/                          # React + TypeScript Application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Autocomplete.tsx        # Componente buscador
+│   │   │   ├── Autocomplete.css
+│   │   │   ├── TopTerms.tsx            # Componente términos populares
+│   │   │   └── TopTerms.css
+│   │   ├── services/
+│   │   │   └── api.ts                  # Cliente API
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── Dockerfile
+│   └── nginx.conf
+│
+├── docker-compose.yml                 # Orquestación de servicios
+├── docker-compose.dev.yml            # Configuración desarrollo
+├── Makefile                           # Comandos útiles
+├── README.md                          # Este archivo
 ```
 
-## 🚀 Inicio Rápido
+## 🔧 Configuración
 
-### Prerrequisitos
-- **Java 17+** (para el backend)
-- **Maven** (para el backend)
-- **Bun** o **Node.js 18+** (para el frontend)
+### Variables de Entorno (Backend)
 
-### 1. Iniciar el Backend
+En `backend/src/main/resources/application-prod.yml`:
+
+```yaml
+server:
+  port: 8080
+  
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/autocomplete
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+      
+autocomplete:
+  max-suggestions: 10
+```
+
+### Variables de Entorno (Frontend)
+
+En `frontend/.env`:
+
+```
+VITE_API_URL=http://localhost:8080/api/autocomplete
+```
+
+## 💾 Base de Datos
+
+### Schema
+
+**Tabla: frequency_term**
+```sql
+CREATE TABLE frequency_term (
+  id BIGSERIAL PRIMARY KEY,
+  term VARCHAR(255) NOT NULL UNIQUE,
+  frequency BIGINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_term ON frequency_term(term);
+CREATE INDEX idx_frequency ON frequency_term(frequency DESC);
+```
+
+## 🚀 Despliegue en Producción
 
 ```bash
-cd backend
-mvn spring-boot:run
+# Usar docker-compose.yml directamente
+docker-compose -f docker-compose.yml up -d
+
+# O con variables de entorno
+docker-compose -f docker-compose.yml --env-file .env.prod up -d
 ```
 
-El backend estará disponible en `http://localhost:8080`
+## 📊 Características de Caché
 
-### 2. Iniciar el Frontend
+El sistema implementa dos niveles de caché:
 
-Con Bun:
-```bash
-cd frontend
-bun install
-bun run dev
-```
+1. **Cache de Sugerencias**: Cachea resultados de búsquedas por prefijo
+   - TTL: Por defecto según configuración de Caffeine
+   - Key: `{prefix}_{limit}`
 
-Con npm:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-El frontend estará disponible en `http://localhost:3000`
-
-### 3. Inicializar Datos de Ejemplo
-
-```bash
-curl -X POST http://localhost:8080/api/autocomplete/init
-```
-
-O usar el endpoint desde el navegador visitando:
-`http://localhost:8080/api/autocomplete/init`
-
-## 🔌 API Endpoints
-
-### GET /api/autocomplete/suggest
-Obtiene sugerencias basadas en un prefijo.
-
-**Parámetros:**
-- `prefix` (String): Prefijo de búsqueda
-- `limit` (Integer): Número máximo de sugerencias (default: 10)
-
-**Respuesta:**
-```json
-{
-  "prefix": "jav",
-  "suggestions": [
-    {"term": "javascript", "frequency": 5000},
-    {"term": "java", "frequency": 4500}
-  ],
-  "executionTimeMs": 15
-}
-```
-
-### POST /api/autocomplete/submit
-Guarda o actualiza un término incrementando su frecuencia.
-
-**Body:**
-```json
-{
-  "term": "react"
-}
-```
-
-### GET /api/autocomplete/top
-Obtiene los términos más populares.
-
-**Parámetros:**
-- `limit` (Integer): Número de términos (default: 10)
-
-### POST /api/autocomplete/init
-Inicializa datos de ejemplo.
+2. **Cache de Top Terms**: Cachea los términos más populares
+   - TTL: Por defecto según configuración de Caffeine
+   - Se invalida automáticamente al registrar nuevos términos
 
 ## 🧪 Testing
 
 ### Backend
+
 ```bash
 cd backend
-mvn test
+./gradlew test
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
-bun test  # o npm test
+npm run test
 ```
 
-## 📊 Métricas de Performance
+## 📈 Monitoreo
 
-El sistema incluye métricas de performance:
-- **Tiempo de respuesta**: Mostrado en cada búsqueda
-- **Cache hit rate**: Visible en logs del backend
-- **Query execution time**: Logged en modo debug
+El backend expone endpoints de salud:
 
-### Benchmarks Esperados
-- Búsqueda sin cache: ~20-50ms
-- Búsqueda con cache hit: ~5-15ms
-- Actualización de frecuencia: ~10-30ms
+```bash
+# Health check
+curl http://localhost:8080/actuator/health
 
-## 🔧 Configuración
-
-### Backend (application.yml)
-```yaml
-autocomplete:
-  max-suggestions: 10        # Máximo de sugerencias
-  min-prefix-length: 1       # Longitud mínima del prefijo
-  cache-enabled: true        # Habilitar/deshabilitar cache
-
-spring:
-  cache:
-    caffeine:
-      spec: maximumSize=10000,expireAfterWrite=300s
+# Metrics (si está habilitado)
+curl http://localhost:8080/actuator/metrics
 ```
 
-### Frontend (api.js)
-```javascript
-const API_BASE_URL = 'http://localhost:8080/api/autocomplete'
-const DEBOUNCE_DELAY = 300  // ms
-const DEFAULT_LIMIT = 10    // sugerencias
+## 🐛 Troubleshooting
+
+### El backend no puede conectar a la base de datos
+
+```bash
+# Verifica el estado del contenedor PostgreSQL
+docker-compose ps
+
+# Revisa los logs
+docker-compose logs postgres
 ```
 
-## 🌐 Despliegue
+### El frontend muestra errores de CORS
+
+Asegúrate que `WebConfig.java` en el backend esté correctamente configurado:
+
+```java
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+            .allowedOrigins("http://localhost", "http://localhost:5173")
+            .allowedMethods("GET", "POST", "DELETE")
+            .allowCredentials(true);
+    }
+}
+```
+
+### Los contenedores no inician
+
+```bash
+# Detén y limpia
+docker-compose down -v
+
+# Reinicia con logs
+docker-compose up --build
+```
+
+## 🔐 Seguridad
+
+Consideraciones de seguridad implementadas:
+
+- ✅ Validación de entrada (prefijo no vacío)
+- ✅ Límite de sugerencias retornadas
+- ✅ CORS configurado
+- ✅ Variables de entorno para credenciales
+
+**Mejoras futuras:**
+- Implementar autenticación (JWT)
+- Rate limiting
+- SSL/TLS en producción
+
+## 📖 Stack Tecnológico
 
 ### Backend
-```bash
-cd backend
-mvn clean package
-java -jar target/autocomplete-backend-1.0.0.jar
-```
+- **Java 21** - Lenguaje de programación
+- **Spring Boot 3.2.1** - Framework web
+- **Spring Data JPA** - ORM
+- **PostgreSQL 16** - Base de datos
+- **Caffeine** - Cache en memoria
+- **Gradle** - Build tool
 
 ### Frontend
-```bash
-cd frontend
-bun run build
-# Servir archivos desde dist/
-```
+- **React 19** - UI Framework
+- **TypeScript 5.6** - Tipado estático
+- **Vite 5** - Build tool
+- **Material-UI (@mui/material)** - Sistema de diseño basado en Material Design 3
+- **Axios** - Cliente HTTP
 
-## 📈 Posibles Mejoras
-
-### Escalabilidad
-- [ ] Migrar a PostgreSQL/MySQL para producción
-- [ ] Implementar Redis para cache distribuido
-- [ ] Rate limiting con bucket algorithm
-- [ ] Load balancing con múltiples instancias
-
-### Features
-- [ ] Búsqueda fuzzy (tolerancia a errores tipográficos)
-- [ ] Sugerencias personalizadas por usuario
-- [ ] Trending terms (términos populares recientes)
-- [ ] Categorización de términos
-
-### Optimización
-- [ ] Trie data structure en memoria
-- [ ] Pre-warming de cache al inicio
-- [ ] Compresión de respuestas HTTP
-- [ ] Service Worker para offline support
-
-## 📚 Referencias
-
-- **System Design Interview** - Alex Xu
-- **Designing Data-Intensive Applications** - Martin Kleppmann
-- Spring Boot Documentation
-- React Documentation
-
-## 🛠️ Stack Tecnológico
-
-### Backend
-- Spring Boot 3.2.1
-- Spring Data JPA
-- H2 Database
-- Caffeine Cache
-- Lombok
-- Maven
-
-### Frontend
-- React 18.2
-- Vite 5
-- Axios
-- Bun (runtime y package manager)
+### DevOps
+- **Docker** - Containerización
+- **Docker Compose** - Orquestación
 
 ## 📝 Licencia
 
 Este proyecto es de código abierto y está disponible bajo la licencia MIT.
 
-## 👥 Contribuciones
+## 👨‍💻 Contribuir
 
 Las contribuciones son bienvenidas. Por favor:
-1. Fork el proyecto
-2. Crea una rama para tu feature
-3. Commit tus cambios
-4. Push a la rama
+
+1. Fork el repositorio
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
+
+## 📧 Contacto
+
+Para preguntas o sugerencias, por favor abre un issue en el repositorio.
+
+---
+
+**Última actualización:** Marzo de 2026
