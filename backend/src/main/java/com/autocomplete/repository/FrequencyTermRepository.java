@@ -14,9 +14,10 @@ public interface FrequencyTermRepository extends JpaRepository<FrequencyTerm, Lo
     Optional<FrequencyTerm> findByTerm(String term);
 
     @Query("SELECT f FROM FrequencyTerm f WHERE LOWER(f.term) LIKE LOWER(CONCAT(:prefix, '%')) "
-           + "ORDER BY f.frequency DESC, f.term ASC")
+           + "ORDER BY f.frequency DESC, f.term ASC LIMIT :limit")
     List<FrequencyTerm> findByTermStartingWithOrderByFrequencyDesc(
-        @Param("prefix") String prefix
+        @Param("prefix") String prefix,
+        @Param("limit") int limit
     );
 
     @Query("SELECT f FROM FrequencyTerm f ORDER BY f.frequency DESC, f.term ASC")

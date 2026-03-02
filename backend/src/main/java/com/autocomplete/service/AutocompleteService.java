@@ -35,10 +35,9 @@ public class AutocompleteService {
         }
 
        var terms = frequencyTermRepository
-            .findByTermStartingWithOrderByFrequencyDesc(prefix.trim().toLowerCase());
+            .findByTermStartingWithOrderByFrequencyDesc(prefix.trim().toLowerCase(), maxSuggestions);
 
         return terms.stream()
-            .limit(Math.min(limit, maxSuggestions))
             .map(term -> new SuggestionDTO(term.getTerm(), term.getFrequency()))
             .collect(Collectors.toList());
     }
