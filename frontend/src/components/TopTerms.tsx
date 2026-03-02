@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react'
 import {
-  EuiPanel,
-  EuiTitle,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiButtonIcon,
-  EuiSpacer,
-  EuiProgress,
-  EuiText,
-  EuiBadge,
-  EuiLoadingSpinner,
-  EuiCallOut,
-  EuiButton,
-} from '@elastic/eui'
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Chip,
+  LinearProgress,
+  CircularProgress,
+  Alert,
+  Button,
+  Stack,
+  IconButton,
+} from '@mui/material'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { getTopTerms, SuggestionDTO } from '../services/api'
 
 export function TopTerms() {
@@ -40,105 +40,94 @@ export function TopTerms() {
 
   if (loading) {
     return (
-      <EuiPanel>
-        <EuiFlexGroup direction="column" alignItems="center" gutterSize="m">
-          <EuiFlexItem>
-            <EuiTitle size="m">
-              <h2>🔥 Términos Más Populares</h2>
-            </EuiTitle>
-          </EuiFlexItem>
-          <EuiFlexItem>
-            <EuiLoadingSpinner size="xl" />
-          </EuiFlexItem>
-        </EuiFlexGroup>
-      </EuiPanel>
+      <Card>
+        <CardContent>
+          <Stack direction="column" alignItems="center" spacing={2}>
+            <Typography variant="h5">🔥 Términos Más Populares</Typography>
+            <CircularProgress />
+          </Stack>
+        </CardContent>
+      </Card>
     )
   }
 
   if (error) {
     return (
-      <EuiPanel>
-        <EuiTitle size="m">
-          <h2>🔥 Términos Más Populares</h2>
-        </EuiTitle>
-        <EuiSpacer size="m" />
-        <EuiCallOut
-          title="Error"
-          color="danger"
-          iconType="error"
-        >
-          {error}
-        </EuiCallOut>
-        <EuiSpacer size="m" />
-        <EuiButton onClick={loadTopTerms} fill>
-          Reintentar
-        </EuiButton>
-      </EuiPanel>
+      <Card>
+        <CardContent>
+          <Typography variant="h5" sx={{ mb: 2 }}>
+            🔥 Términos Más Populares
+          </Typography>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Button variant="contained" onClick={loadTopTerms}>
+            Reintentar
+          </Button>
+        </CardContent>
+      </Card>
     )
   }
 
   const maxFrequency = topTerms[0]?.frequency || 1
 
   return (
-    <EuiPanel>
-      <EuiFlexGroup justifyContent="spaceBetween" alignItems="center">
-        <EuiFlexItem>
-          <EuiTitle size="m">
-            <h2>🔥 Términos Más Populares</h2>
-          </EuiTitle>
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiButtonIcon
-            iconType="refresh"
+    <Card>
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="h5" sx={{ m: 0 }}>
+            🔥 Términos Más Populares
+          </Typography>
+          <IconButton
             onClick={loadTopTerms}
+            size="small"
             aria-label="Actualizar términos populares"
-            display="base"
-          />
-        </EuiFlexItem>
-      </EuiFlexGroup>
+          >
+            <RefreshIcon />
+          </IconButton>
+        </Stack>
 
-      <EuiSpacer size="m" />
+        <Stack direction="column" spacing={1}>
+          {topTerms.map((term, index) => (
+            <Box
+              key={term.term}
+              sx={{
+                backgroundColor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                padding: 1.5,
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Chip
+                  label={`#${index + 1}`}
+                  color="primary"
+                  size="small"
+                  sx={{ minWidth: '40px', justifyContent: 'center' }}
+                />
 
-      <EuiFlexGroup direction="column" gutterSize="s">
-        {topTerms.map((term, index) => (
-          <EuiFlexItem key={term.term}>
-            <EuiPanel color="subdued" paddingSize="m">
-              <EuiFlexGroup alignItems="center" gutterSize="m">
-                <EuiFlexItem grow={false}>
-                  <EuiBadge color="primary" style={{ minWidth: '36px', textAlign: 'center' }}>
-                    #{index + 1}
-                  </EuiBadge>
-                </EuiFlexItem>
-                
-                <EuiFlexItem>
-                  <EuiFlexGroup direction="column" gutterSize="xs">
-                    <EuiFlexItem>
-                      <EuiText size="s">
-                        <strong>{term.term}</strong>
-                      </EuiText>
-                    </EuiFlexItem>
-                    <EuiFlexItem>
-                      <EuiText size="xs" color="subdued">
-                        {term.frequency.toLocaleString()} búsquedas
-                      </EuiText>
-                    </EuiFlexItem>
-                  </EuiFlexGroup>
-                </EuiFlexItem>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2">
+                    <strong>{term.term}</strong>
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {term.frequency.toLocaleString()} búsquedas
+                  </Typography>
+                </Box>
 
-                <EuiFlexItem grow={2}>
-                  <EuiProgress
-                    value={term.frequency}
-                    max={maxFrequency}
-                    color="primary"
-                    size="s"
+                <Box sx={{ flex: 2, minWidth: '100px' }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={(term.frequency / maxFrequency) * 100}
                   />
-                </EuiFlexItem>
-              </EuiFlexGroup>
-            </EuiPanel>
-          </EuiFlexItem>
-        ))}
-      </EuiFlexGroup>
-    </EuiPanel>
+                </Box>
+              </Stack>
+            </Box>
+          ))}
+        </Stack>
+      </CardContent>
+    </Card>
   )
 }
 
