@@ -8,7 +8,7 @@ Un sistema de autocompletado escalable implementado con conceptos de System Desi
 - **Tracking de Términos**: Contador de frecuencia para términos más buscados
 - **Caché Distribuido**: Implementación con Caffeine Cache para optimizar consultas
 - **API REST**: Endpoints bien documentados para integración
-- **Interfaz Moderna**: UI responsiva con Elastic UI React
+- **Interfaz Moderna**: UI responsiva con Material Design 3 (Material-UI)
 - **Arquitectura de Microservicios**: Backend y Frontend separados
 - **Containerizada**: Fácil despliegue con Docker Compose
 
@@ -19,7 +19,7 @@ Un sistema de autocompletado escalable implementado con conceptos de System Desi
 │                  FRONTEND (React + TypeScript)                │
 │                   - Sistema Autocomplete                      │
 │                   - Top Terms Component                       │
-│                   - Elastic UI Components                     │
+│                   - Material-UI Components                    │
 └─────────────────┬───────────────────────────────────────────┘
                   │
                   │ HTTP REST API
@@ -382,10 +382,10 @@ Consideraciones de seguridad implementadas:
 - **Gradle** - Build tool
 
 ### Frontend
-- **React 18** - UI Framework
-- **TypeScript** - Tipado estático
-- **Vite** - Build tool
-- **Elastic UI** - Componentes UI
+- **React 19** - UI Framework
+- **TypeScript 5.6** - Tipado estático
+- **Vite 5** - Build tool
+- **Material-UI (@mui/material)** - Sistema de diseño basado en Material Design 3
 - **Axios** - Cliente HTTP
 
 ### DevOps
