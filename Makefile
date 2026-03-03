@@ -15,13 +15,13 @@ ifeq ($(UNAME_S),Darwin)
 endif
 ifdef DETECTED_OS
     # Unix/Linux/MacOS
-    GRADLE := ./$(BACKEND_DIR)/gradlew
+    GRADLE := ./gradlew
     BUN := bun
     MKDIR := mkdir -p
     RM := rm -rf
 else
     # Windows
-    GRADLE := .\$(BACKEND_DIR)\gradlew.bat
+    GRADLE := .\gradlew.bat
     BUN := bun
     MKDIR := mkdir
     RM := rmdir /s /q
