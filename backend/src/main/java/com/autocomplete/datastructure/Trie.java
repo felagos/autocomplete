@@ -41,9 +41,9 @@ public class Trie {
         insert(word, 1L);
     }
     
-    public void incrementFrequency(String word) {
+    public long incrementFrequency(String word) {
         if (word == null || word.isEmpty()) {
-            return;
+            return 0L;
         }
         
         String normalizedWord = word.toLowerCase().trim();
@@ -62,6 +62,7 @@ public class Trie {
         }
         
         log.debug("Frecuencia actualizada para: {} a {}", normalizedWord, current.getFrequency());
+        return current.getFrequency();
     }
     
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {

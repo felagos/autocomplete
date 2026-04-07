@@ -1,7 +1,6 @@
 package com.autocomplete.controller;
 
 import com.autocomplete.dto.*;
-import com.autocomplete.entity.FrequencyTerm;
 import com.autocomplete.service.AutocompleteService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -40,8 +39,8 @@ public class AutocompleteController {
     }
     
     @PostMapping("/submit")
-    public ResponseEntity<FrequencyTerm> submitTerm(@Valid @RequestBody TermSubmitRequest request) {
-        FrequencyTerm savedTerm = autocompleteService.saveTerm(request.getTerm());
+    public ResponseEntity<FrequencySavedDto> submitTerm(@Valid @RequestBody TermSubmitRequest request) {
+        FrequencySavedDto savedTerm = autocompleteService.saveTerm(request.getTerm());
         return ResponseEntity.ok(savedTerm);
     }
     
@@ -52,9 +51,5 @@ public class AutocompleteController {
         return ResponseEntity.ok(topTerms);
     }
     
-    @PostMapping("/init")
-    public ResponseEntity<String> initializeData() {
-        autocompleteService.initializeSampleData();
-        return ResponseEntity.ok("Datos de ejemplo inicializados correctamente");
-    }
+
 }

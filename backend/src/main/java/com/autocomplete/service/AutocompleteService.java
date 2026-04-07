@@ -1,18 +1,17 @@
 package com.autocomplete.service;
 
 import com.autocomplete.datastructure.Trie;
+import com.autocomplete.dto.FrequencySavedDto;
 import com.autocomplete.dto.SuggestionDTO;
 import com.autocomplete.entity.FrequencyTerm;
-import com.autocomplete.event.TrieUpdateEvent;
+import com.autocomplete.event.TermSavedEvent;
 import com.autocomplete.repository.FrequencyTermRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,20 +21,17 @@ public class AutocompleteService {
     
     private final Trie trie;
     private final FrequencyTermRepository frequencyTermRepository;
-    private final RedisTemplate<String, TrieUpdateEvent> redisTemplate;
-    private final ChannelTopic trieUpdateTopic;
-    
+    private final ApplicationEventPublisher eventPublisher;
+
     @Value("${autocomplete.max-suggestions:10}")
     private int maxSuggestions;
-    
-    public AutocompleteService(Trie trie, 
-                              FrequencyTermRepository frequencyTermRepository,
-                              RedisTemplate<String, TrieUpdateEvent> redisTemplate,
-                              ChannelTopic trieUpdateTopic) {
+
+    public AutocompleteService(Trie trie,
+                               FrequencyTermRepository frequencyTermRepository,
+                               ApplicationEventPublisher eventPublisher) {
         this.trie = trie;
         this.frequencyTermRepository = frequencyTermRepository;
-        this.redisTemplate = redisTemplate;
-        this.trieUpdateTopic = trieUpdateTopic;
+        this.eventPublisher = eventPublisher;
     }
     
     @PostConstruct
@@ -61,35 +57,15 @@ public class AutocompleteService {
         return trie.getSuggestions(prefix.trim(), effectiveLimit);
     }
     
-    @Transactional
-    public FrequencyTerm saveTerm(String term) {
+    public FrequencySavedDto saveTerm(String term) {
         log.info("Guardando término: {}", term);
-        
+
         String normalizedTerm = term.trim().toLowerCase();
-        
-        trie.incrementFrequency(normalizedTerm);
-        
-        FrequencyTerm savedTerm = frequencyTermRepository.findByTerm(normalizedTerm)
-            .map(existingTerm -> {
-                existingTerm.incrementFrequency();
-                return frequencyTermRepository.save(existingTerm);
-            })
-            .orElseGet(() -> {
-                FrequencyTerm newTerm = new FrequencyTerm();
-                newTerm.setTerm(normalizedTerm);
-                newTerm.setFrequency(1L);
-                return frequencyTermRepository.save(newTerm);
-            });
-        
-        try {
-            TrieUpdateEvent event = new TrieUpdateEvent(savedTerm.getTerm(), savedTerm.getFrequency());
-            redisTemplate.convertAndSend(trieUpdateTopic.getTopic(), event);
-            log.debug("Evento de actualización publicado a Redis: {}", event);
-        } catch (Exception e) {
-            log.warn("Error publicando evento a Redis (la instancia local ya está actualizada): {}", e.getMessage());
-        }
-        
-        return savedTerm;
+        long frequency = trie.incrementFrequency(normalizedTerm);
+
+        eventPublisher.publishEvent(new TermSavedEvent(this, normalizedTerm));
+
+        return new FrequencySavedDto(normalizedTerm, frequency);
     }
     
     public List<SuggestionDTO> getTopTerms(int limit) {
@@ -101,15 +77,5 @@ public class AutocompleteService {
             .toList();
     }
     
-    @Transactional(readOnly = true)
-    public void initializeSampleData() {
-        log.info("Inicializando Trie desde la base de datos");
-        List<FrequencyTerm> terms = frequencyTermRepository.findAll();
 
-        for (FrequencyTerm term : terms) {
-            trie.insert(term.getTerm(), term.getFrequency());
-        }
-
-        log.info("Trie reinicializado con {} términos desde la base de datos", terms.size());
-    }
 }
