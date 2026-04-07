@@ -94,7 +94,6 @@ public class FrequencyTerm {
     public int hashCode() {
         return java.util.Objects.hash(id, term, frequency, lastUsed, createdAt);
     }
-    }
     
     @Override
     public String toString() {

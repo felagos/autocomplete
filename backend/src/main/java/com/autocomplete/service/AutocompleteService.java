@@ -69,7 +69,6 @@ public class AutocompleteService {
         
         trie.incrementFrequency(normalizedTerm);
         
-        // Persistir en base de datos
         FrequencyTerm savedTerm = frequencyTermRepository.findByTerm(normalizedTerm)
             .map(existingTerm -> {
                 existingTerm.incrementFrequency();
@@ -102,26 +101,15 @@ public class AutocompleteService {
             .toList();
     }
     
-    @Transactional
+    @Transactional(readOnly = true)
     public void initializeSampleData() {
-        if (frequencyTermRepository.count() == 0) {
-            log.info("Inicializando datos de ejemplo");
-            
-            String[] sampleTerms = {
-                "javascript", "java", "python", "react", "angular", "vue",
-                "typescript", "spring", "django", "flask", "nodejs", "express",
-                "mongodb", "postgresql", "mysql", "redis", "docker", "kubernetes",
-                "aws", "azure", "google cloud", "spring boot", "react native"
-            };
-            
-            for (int i = 0; i < sampleTerms.length; i++) {
-                FrequencyTerm term = new FrequencyTerm();
-                term.setTerm(sampleTerms[i]);
-                term.setFrequency((long) (sampleTerms.length - i) * 100);
-                frequencyTermRepository.save(term);
-            }
-            
-            log.info("Datos de ejemplo inicializados");
+        log.info("Inicializando Trie desde la base de datos");
+        List<FrequencyTerm> terms = frequencyTermRepository.findAll();
+
+        for (FrequencyTerm term : terms) {
+            trie.insert(term.getTerm(), term.getFrequency());
         }
+
+        log.info("Trie reinicializado con {} términos desde la base de datos", terms.size());
     }
 }
