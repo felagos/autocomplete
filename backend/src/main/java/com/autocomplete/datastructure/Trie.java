@@ -9,13 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
-/**
- * Implementación de Trie Tree para autocompletado eficiente
- * Complejidad temporal:
- * - Insert: O(m) donde m es la longitud de la palabra
- * - Search: O(m + k) donde k es el número de sugerencias
- * - Space: O(n * m) donde n es el número de palabras
- */
 @Component
 public class Trie {
     private static final Logger log = LoggerFactory.getLogger(Trie.class);
@@ -25,10 +18,6 @@ public class Trie {
         this.root = new TrieNode();
     }
     
-    /**
-     * Inserta una palabra en el Trie
-     * Si la palabra ya existe, incrementa su frecuencia
-     */
     public void insert(String word, long frequency) {
         if (word == null || word.isEmpty()) {
             return;
@@ -48,16 +37,10 @@ public class Trie {
         log.debug("Palabra insertada: {} con frecuencia: {}", normalizedWord, frequency);
     }
     
-    /**
-     * Inserta una palabra con frecuencia inicial de 1
-     */
     public void insert(String word) {
         insert(word, 1L);
     }
     
-    /**
-     * Incrementa la frecuencia de una palabra existente o la inserta si no existe
-     */
     public void incrementFrequency(String word) {
         if (word == null || word.isEmpty()) {
             return;
@@ -81,10 +64,6 @@ public class Trie {
         log.debug("Frecuencia actualizada para: {} a {}", normalizedWord, current.getFrequency());
     }
     
-    /**
-     * Busca sugerencias basadas en el prefijo
-     * Retorna las top N sugerencias ordenadas por frecuencia (mayor a menor)
-     */
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
         if (prefix == null || prefix.isEmpty()) {
             return List.of();
@@ -93,7 +72,6 @@ public class Trie {
         String normalizedPrefix = prefix.toLowerCase().trim();
         TrieNode current = root;
         
-        // Navegar hasta el final del prefijo
         for (char c : normalizedPrefix.toCharArray()) {
             if (!current.hasChild(c)) {
                 log.debug("No se encontraron sugerencias para el prefijo: {}", normalizedPrefix);
@@ -102,11 +80,9 @@ public class Trie {
             current = current.getChild(c);
         }
         
-        // Recolectar todas las palabras que empiezan con el prefijo
         List<SuggestionDTO> suggestions = new ArrayList<>();
         collectAllWords(current, suggestions);
         
-        // Usar PriorityQueue para obtener las top N sugerencias por frecuencia
         PriorityQueue<SuggestionDTO> topSuggestions = new PriorityQueue<>(
             (a, b) -> Long.compare(b.getFrequency(), a.getFrequency())
         );
@@ -124,9 +100,6 @@ public class Trie {
         return result;
     }
     
-    /**
-     * Recolecta recursivamente todas las palabras desde un nodo dado
-     */
     private void collectAllWords(TrieNode node, List<SuggestionDTO> words) {
         if (node == null) {
             return;
@@ -141,9 +114,6 @@ public class Trie {
         }
     }
     
-    /**
-     * Verifica si una palabra existe en el Trie
-     */
     public boolean search(String word) {
         if (word == null || word.isEmpty()) {
             return false;
@@ -162,9 +132,6 @@ public class Trie {
         return current.isEndOfWord();
     }
     
-    /**
-     * Verifica si existe alguna palabra con el prefijo dado
-     */
     public boolean startsWith(String prefix) {
         if (prefix == null || prefix.isEmpty()) {
             return false;
@@ -183,25 +150,12 @@ public class Trie {
         return true;
     }
     
-    /**
-     * Obtiene todas las palabras almacenadas en el Trie
-     * ordenadas por frecuencia (mayor a menor)
-     */
     public List<SuggestionDTO> getAllWords() {
         List<SuggestionDTO> allWords = new ArrayList<>();
         collectAllWords(root, allWords);
         
-        // Ordenar por frecuencia descendente
         allWords.sort((a, b) -> Long.compare(b.getFrequency(), a.getFrequency()));
         
         return allWords;
-    }
-    
-    /**
-     * Limpia todo el contenido del Trie
-     */
-    public void clear() {
-        root.getChildren().clear();
-        log.info("Trie limpiado");
     }
 }

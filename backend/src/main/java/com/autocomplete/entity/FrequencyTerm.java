@@ -4,11 +4,6 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-/**
- * Entidad que representa la tabla de frecuencias (frequency_table)
- * Almacena los términos y su frecuencia de uso para el sistema de autocompletado
- * Basado en los conceptos de System Design Interview para sistemas de búsqueda
- */
 @Entity
 @Table(name = "frequency_table", indexes = {
     @Index(name = "idx_term", columnList = "term"),
@@ -98,6 +93,7 @@ public class FrequencyTerm {
     @Override
     public int hashCode() {
         return java.util.Objects.hash(id, term, frequency, lastUsed, createdAt);
+    }
     }
     
     @Override

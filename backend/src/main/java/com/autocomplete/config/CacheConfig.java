@@ -9,10 +9,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Configuración del cache usando Caffeine
- * Optimiza las búsquedas frecuentes según System Design Interview
- */
 @Configuration
 @EnableCaching
 public class CacheConfig {

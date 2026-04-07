@@ -16,14 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Servicio de autocompletado que implementa conceptos de System Design Interview:
- * - Trie Tree para búsqueda eficiente O(m + k)
- * - Frequency-based ranking
- * - Estructura de datos en memoria para máxima performance
- * - Persistencia en base de datos para durabilidad
- * - Sincronización distribuida via Redis Pub/Sub
- */
 @Service
 public class AutocompleteService {
     private static final Logger log = LoggerFactory.getLogger(AutocompleteService.class);
@@ -46,9 +38,6 @@ public class AutocompleteService {
         this.trieUpdateTopic = trieUpdateTopic;
     }
     
-    /**
-     * Inicializa el Trie con datos existentes en la base de datos
-     */
     @PostConstruct
     public void initializeTrie() {
         log.info("Inicializando Trie con datos de la base de datos");
@@ -61,10 +50,6 @@ public class AutocompleteService {
         log.info("Trie inicializado con {} términos", terms.size());
     }
     
-    /**
-     * Obtiene sugerencias basadas en el prefijo usando Trie
-     * Complejidad: O(m + k) donde m es la longitud del prefijo y k el número de sugerencias
-     */
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
         log.info("Buscando sugerencias para prefijo: {}", prefix);
         
@@ -76,18 +61,12 @@ public class AutocompleteService {
         return trie.getSuggestions(prefix.trim(), effectiveLimit);
     }
     
-    /**
-     * Guarda o actualiza un término incrementando su frecuencia
-     * Actualiza tanto el Trie como la base de datos para persistencia
-     * Publica evento a Redis para sincronizar otras instancias
-     */
     @Transactional
     public FrequencyTerm saveTerm(String term) {
         log.info("Guardando término: {}", term);
         
         String normalizedTerm = term.trim().toLowerCase();
         
-        // Actualizar el Trie local
         trie.incrementFrequency(normalizedTerm);
         
         // Persistir en base de datos
@@ -103,7 +82,6 @@ public class AutocompleteService {
                 return frequencyTermRepository.save(newTerm);
             });
         
-        // Publicar evento a Redis para sincronizar otras instancias
         try {
             TrieUpdateEvent event = new TrieUpdateEvent(savedTerm.getTerm(), savedTerm.getFrequency());
             redisTemplate.convertAndSend(trieUpdateTopic.getTopic(), event);
@@ -115,9 +93,6 @@ public class AutocompleteService {
         return savedTerm;
     }
     
-    /**
-     * Obtiene los términos más populares del Trie
-     */
     public List<SuggestionDTO> getTopTerms(int limit) {
         log.info("Obteniendo top {} términos", limit);
         
@@ -127,9 +102,6 @@ public class AutocompleteService {
             .toList();
     }
     
-    /**
-     * Inicializa datos de ejemplo
-     */
     @Transactional
     public void initializeSampleData() {
         if (frequencyTermRepository.count() == 0) {

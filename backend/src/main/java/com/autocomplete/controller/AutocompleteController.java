@@ -9,13 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controlador REST para el sistema de autocompletado
- * Endpoints:
- * - GET /api/autocomplete/suggest - Obtener sugerencias
- * - POST /api/autocomplete/submit - Guardar término
- * - GET /api/autocomplete/top - Obtener términos más populares
- */
 @RestController
 @RequestMapping("/api/autocomplete")
 public class AutocompleteController {
@@ -26,9 +19,6 @@ public class AutocompleteController {
         this.autocompleteService = autocompleteService;
     }
     
-    /**
-     * Endpoint para obtener sugerencias basadas en un prefijo
-     */
     @GetMapping("/suggest")
     public ResponseEntity<AutocompleteResponse> getSuggestions(
             @RequestParam String prefix,
@@ -49,19 +39,12 @@ public class AutocompleteController {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * Endpoint para guardar un término seleccionado
-     * Incrementa la frecuencia si ya existe
-     */
     @PostMapping("/submit")
     public ResponseEntity<FrequencyTerm> submitTerm(@Valid @RequestBody TermSubmitRequest request) {
         FrequencyTerm savedTerm = autocompleteService.saveTerm(request.getTerm());
         return ResponseEntity.ok(savedTerm);
     }
     
-    /**
-     * Endpoint para obtener los términos más populares
-     */
     @GetMapping("/top")
     public ResponseEntity<List<SuggestionDTO>> getTopTerms(
             @RequestParam(defaultValue = "10") int limit) {
@@ -69,9 +52,6 @@ public class AutocompleteController {
         return ResponseEntity.ok(topTerms);
     }
     
-    /**
-     * Endpoint para inicializar datos de ejemplo
-     */
     @PostMapping("/init")
     public ResponseEntity<String> initializeData() {
         autocompleteService.initializeSampleData();

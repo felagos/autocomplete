@@ -14,19 +14,13 @@ public interface FrequencyTermRepository extends JpaRepository<FrequencyTerm, Lo
     
     Optional<FrequencyTerm> findByTerm(String term);
     
-    /**
-     * Encuentra términos que comienzan con el prefijo dado, 
-     * ordenados por frecuencia descendente
-     */
+
     @Query("SELECT f FROM FrequencyTerm f WHERE LOWER(f.term) LIKE LOWER(CONCAT(:prefix, '%')) " +
            "ORDER BY f.frequency DESC, f.term ASC")
     List<FrequencyTerm> findByTermStartingWithOrderByFrequencyDesc(
         @Param("prefix") String prefix
     );
     
-    /**
-     * Obtiene los top N términos por frecuencia
-     */
     @Query("SELECT f FROM FrequencyTerm f ORDER BY f.frequency DESC, f.term ASC")
     List<FrequencyTerm> findTopByFrequency();
 }

@@ -2,10 +2,6 @@ package com.autocomplete.event;
 
 import java.io.Serializable;
 
-/**
- * Evento que representa una actualización en el Trie
- * Se publica via Redis Pub/Sub para sincronizar todas las instancias
- */
 public class TrieUpdateEvent implements Serializable {
     private static final long serialVersionUID = 1L;
     

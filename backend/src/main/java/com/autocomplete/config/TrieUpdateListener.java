@@ -9,10 +9,6 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.stereotype.Component;
 
-/**
- * Listener que escucha eventos de actualización del Trie desde Redis
- * Mantiene sincronizado el Trie local cuando otras instancias actualizan datos
- */
 @Component
 public class TrieUpdateListener implements MessageListener {
     private static final Logger log = LoggerFactory.getLogger(TrieUpdateListener.class);
