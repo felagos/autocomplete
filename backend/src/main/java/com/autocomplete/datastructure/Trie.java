@@ -81,21 +81,14 @@ public class Trie {
             current = current.getChild(c);
         }
         
-        List<SuggestionDTO> suggestions = new ArrayList<>();
-        collectAllWords(current, suggestions);
-        
         PriorityQueue<SuggestionDTO> topSuggestions = new PriorityQueue<>(
-            (a, b) -> Long.compare(b.getFrequency(), a.getFrequency())
+            limit, (a, b) -> Long.compare(a.getFrequency(), b.getFrequency())
         );
         
-        topSuggestions.addAll(suggestions);
+        collectTopWords(current, topSuggestions, limit);
         
-        List<SuggestionDTO> result = new ArrayList<>();
-        int count = 0;
-        while (!topSuggestions.isEmpty() && count < limit) {
-            result.add(topSuggestions.poll());
-            count++;
-        }
+        List<SuggestionDTO> result = new ArrayList<>(topSuggestions);
+        result.sort((a, b) -> Long.compare(b.getFrequency(), a.getFrequency()));
         
         log.info("Encontradas {} sugerencias para el prefijo: {}", result.size(), normalizedPrefix);
         return result;
@@ -112,6 +105,25 @@ public class Trie {
         
         for (TrieNode child : node.getChildren().values()) {
             collectAllWords(child, words);
+        }
+    }
+
+    private void collectTopWords(TrieNode node, PriorityQueue<SuggestionDTO> heap, int limit) {
+        if (node == null) {
+            return;
+        }
+
+        if (node.isEndOfWord()) {
+            if (heap.size() < limit) {
+                heap.offer(new SuggestionDTO(node.getWord(), node.getFrequency()));
+            } else if (node.getFrequency() > heap.peek().getFrequency()) {
+                heap.poll();
+                heap.offer(new SuggestionDTO(node.getWord(), node.getFrequency()));
+            }
+        }
+
+        for (TrieNode child : node.getChildren().values()) {
+            collectTopWords(child, heap, limit);
         }
     }
     
