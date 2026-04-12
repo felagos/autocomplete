@@ -84,7 +84,6 @@ public class Trie {
         PriorityQueue<SuggestionDTO> topSuggestions = new PriorityQueue<>(
             limit, (a, b) -> Long.compare(a.getFrequency(), b.getFrequency())
         );
-        
         collectTopWords(current, topSuggestions, limit);
         
         List<SuggestionDTO> result = new ArrayList<>(topSuggestions);
