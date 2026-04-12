@@ -3,9 +3,7 @@ package com.autocomplete.service;
 import com.autocomplete.datastructure.Trie;
 import com.autocomplete.dto.FrequencySavedDto;
 import com.autocomplete.dto.SuggestionDTO;
-import com.autocomplete.entity.FrequencyTerm;
 import com.autocomplete.repository.FrequencyTermRepository;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,18 +29,6 @@ public class AutocompleteService {
         this.trieRef = new AtomicReference<>(trie);
         this.frequencyTermRepository = frequencyTermRepository;
         this.termBuffer = termBuffer;
-    }
-    
-    @PostConstruct
-    public void initializeTrie() {
-        log.info("Inicializando Trie con datos de la base de datos");
-        List<FrequencyTerm> terms = frequencyTermRepository.findAll();
-        
-        for (FrequencyTerm term : terms) {
-            trieRef.get().insert(term.getTerm(), term.getFrequency());
-        }
-        
-        log.info("Trie inicializado con {} términos", terms.size());
     }
     
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
