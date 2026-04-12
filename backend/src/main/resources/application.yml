@@ -48,6 +48,7 @@ autocomplete:
   max-suggestions: ${MAX_SUGGESTIONS:10}
   min-prefix-length: ${MIN_PREFIX_LENGTH:1}
   cache-enabled: ${CACHE_ENABLED:true}
+  rebuild-interval-ms: ${TRIE_REBUILD_INTERVAL_MS:300000}  # 5 minutos por defecto
 
 # Actuator para health checks
 management:
