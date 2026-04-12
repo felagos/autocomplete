@@ -12,6 +12,7 @@ import java.util.PriorityQueue;
 @Component
 public class Trie {
     private static final Logger log = LoggerFactory.getLogger(Trie.class);
+    private static final int CACHE_SIZE = 10;
     private final TrieNode root;
     
     public Trie() {
@@ -33,7 +34,8 @@ public class Trie {
         current.setEndOfWord(true);
         current.setWord(normalizedWord);
         current.setFrequency(frequency);
-        
+
+        invalidateCachePath(normalizedWord);
         log.debug("Palabra insertada: {} con frecuencia: {}", normalizedWord, frequency);
     }
     
@@ -61,6 +63,7 @@ public class Trie {
             current.setFrequency(1L);
         }
         
+        invalidateCachePath(normalizedWord);
         log.debug("Frecuencia actualizada para: {} a {}", normalizedWord, current.getFrequency());
         return current.getFrequency();
     }
@@ -81,18 +84,42 @@ public class Trie {
             current = current.getChild(c);
         }
         
+        if (limit <= CACHE_SIZE && current.getCachedSuggestions() != null) {
+            List<SuggestionDTO> cached = current.getCachedSuggestions();
+            log.debug("Cache hit para prefijo: {}", normalizedPrefix);
+            return new ArrayList<>(cached.subList(0, Math.min(limit, cached.size())));
+        }
+
+        int collectSize = (limit <= CACHE_SIZE) ? CACHE_SIZE : limit;
         PriorityQueue<SuggestionDTO> topSuggestions = new PriorityQueue<>(
-            limit, (a, b) -> Long.compare(a.getFrequency(), b.getFrequency())
+            collectSize, (a, b) -> Long.compare(a.getFrequency(), b.getFrequency())
         );
-        collectTopWords(current, topSuggestions, limit);
-        
-        List<SuggestionDTO> result = new ArrayList<>(topSuggestions);
-        result.sort((a, b) -> Long.compare(b.getFrequency(), a.getFrequency()));
-        
+        collectTopWords(current, topSuggestions, collectSize);
+
+        List<SuggestionDTO> allCollected = new ArrayList<>(topSuggestions);
+        allCollected.sort((a, b) -> Long.compare(b.getFrequency(), a.getFrequency()));
+
+        if (limit <= CACHE_SIZE) {
+            current.setCachedSuggestions(new ArrayList<>(allCollected));
+        }
+
+        List<SuggestionDTO> result = new ArrayList<>(allCollected.subList(0, Math.min(limit, allCollected.size())));
         log.info("Encontradas {} sugerencias para el prefijo: {}", result.size(), normalizedPrefix);
         return result;
     }
     
+    private void invalidateCachePath(String word) {
+        TrieNode current = root;
+        root.invalidateCache();
+        for (char c : word.toCharArray()) {
+            if (!current.hasChild(c)) {
+                break;
+            }
+            current = current.getChild(c);
+            current.invalidateCache();
+        }
+    }
+
     private void collectAllWords(TrieNode node, List<SuggestionDTO> words) {
         if (node == null) {
             return;

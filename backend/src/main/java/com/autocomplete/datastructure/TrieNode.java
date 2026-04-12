@@ -1,6 +1,8 @@
 package com.autocomplete.datastructure;
 
+import com.autocomplete.dto.SuggestionDTO;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TrieNode {
@@ -8,6 +10,7 @@ public class TrieNode {
     private boolean isEndOfWord;
     private String word;
     private long frequency;
+    private List<SuggestionDTO> cachedSuggestions;
     
     public TrieNode() {
         this.children = new HashMap<>();
@@ -62,5 +65,17 @@ public class TrieNode {
     
     public void incrementFrequency() {
         this.frequency++;
+    }
+
+    public List<SuggestionDTO> getCachedSuggestions() {
+        return cachedSuggestions;
+    }
+
+    public void setCachedSuggestions(List<SuggestionDTO> cachedSuggestions) {
+        this.cachedSuggestions = cachedSuggestions;
+    }
+
+    public void invalidateCache() {
+        this.cachedSuggestions = null;
     }
 }
