@@ -3,10 +3,12 @@ package com.autocomplete.service;
 import com.autocomplete.datastructure.Trie;
 import com.autocomplete.dto.FrequencySavedDto;
 import com.autocomplete.dto.SuggestionDTO;
+import com.autocomplete.event.TermRecordedEvent;
 import com.autocomplete.repository.FrequencyTermRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,17 +20,17 @@ public class AutocompleteService {
     
     private final AtomicReference<Trie> trieRef;
     private final FrequencyTermRepository frequencyTermRepository;
-    private final TermBuffer termBuffer;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${autocomplete.max-suggestions:10}")
     private int maxSuggestions;
 
     public AutocompleteService(Trie trie,
                                FrequencyTermRepository frequencyTermRepository,
-                               TermBuffer termBuffer) {
+                               ApplicationEventPublisher eventPublisher) {
         this.trieRef = new AtomicReference<>(trie);
         this.frequencyTermRepository = frequencyTermRepository;
-        this.termBuffer = termBuffer;
+        this.eventPublisher = eventPublisher;
     }
     
     public List<SuggestionDTO> getSuggestions(String prefix, int limit) {
@@ -47,7 +49,7 @@ public class AutocompleteService {
 
         String normalizedTerm = term.trim().toLowerCase();
 
-        termBuffer.record(normalizedTerm);
+        eventPublisher.publishEvent(new TermRecordedEvent(this, normalizedTerm));
 
         long currentFrequency = trieRef.get().search(normalizedTerm)
                 ? frequencyTermRepository.findByTerm(normalizedTerm)
