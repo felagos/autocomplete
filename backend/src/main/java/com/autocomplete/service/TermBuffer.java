@@ -1,16 +1,16 @@
 package com.autocomplete.service;
 
+import com.autocomplete.repository.TermBufferRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
- * In-memory accumulator for search terms.
+ * PostgreSQL-backed accumulator for search terms.
  *
  * Sits between the write path (saveTerm) and the Trie:
  * every search is recorded here without touching the Trie at all.
@@ -23,35 +23,40 @@ public class TermBuffer {
 
     private static final Logger log = LoggerFactory.getLogger(TermBuffer.class);
 
-    private final ConcurrentHashMap<String, AtomicLong> buffer = new ConcurrentHashMap<>();
+    private final TermBufferRepository termBufferRepository;
 
-    /**
-     * Thread-safe increment — never blocks the request thread.
-     */
-    public void record(String term) {
-        buffer.computeIfAbsent(term, k -> new AtomicLong(0)).incrementAndGet();
+    public TermBuffer(TermBufferRepository termBufferRepository) {
+        this.termBufferRepository = termBufferRepository;
     }
 
     /**
-     * Atomically snapshots and resets all counters.
+     * Thread-safe upsert — delegates to a native INSERT … ON CONFLICT DO UPDATE.
+     */
+    @Transactional
+    public void record(String term) {
+        termBufferRepository.upsertTerm(term);
+    }
+
+    /**
+     * Snapshots all buffered counts and clears the table.
      * Called exclusively by the rebuild scheduler.
      *
      * @return map of term → accumulated count since last drain
      */
+    @Transactional
     public Map<String, Long> drainAndReset() {
-        Map<String, Long> snapshot = new HashMap<>();
-        buffer.forEach((term, counter) -> {
-            long count = counter.getAndSet(0);
-            if (count > 0) {
-                snapshot.put(term, count);
-            }
-        });
-        buffer.entrySet().removeIf(e -> e.getValue().get() == 0);
+        Map<String, Long> snapshot = termBufferRepository.findAll()
+                .stream()
+                .collect(Collectors.toMap(
+                        e -> e.getTerm(),
+                        e -> e.getCount()
+                ));
+        termBufferRepository.deleteAllInBatch();
         log.debug("Buffer drenado: {} términos acumulados", snapshot.size());
         return snapshot;
     }
 
     public boolean isEmpty() {
-        return buffer.isEmpty();
+        return termBufferRepository.count() == 0;
     }
 }
